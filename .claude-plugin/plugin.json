@@ -1,0 +1,35 @@
+{
+  "name": "relay",
+  "version": "0.1.0",
+  "description": "AI squad for Power Platform development — 8 specialist subagents with workflow gates, security-first design, and dual-target support (Claude Code + GitHub Copilot CLI)",
+  "author": {
+    "name": "Gen"
+  },
+  "license": "MIT",
+  "skills": [
+    "skills/relay-workflow",
+    "skills/power-platform-security-patterns",
+    "skills/power-platform-footgun-checklist",
+    "skills/power-platform-alm"
+  ],
+  "agents": [
+    "agents/scout.md",
+    "agents/drafter.md",
+    "agents/auditor.md",
+    "agents/warden.md",
+    "agents/critic.md",
+    "agents/vault.md",
+    "agents/forge.md",
+    "agents/sentinel.md"
+  ],
+  "commands": [
+    "commands/relay-start.md",
+    "commands/relay-status.md",
+    "commands/relay-plan-review.md",
+    "commands/relay-security-audit.md",
+    "commands/relay-deploy.md",
+    "commands/relay-config.md",
+    "commands/relay-agent.md"
+  ],
+  "hooks": "hooks/hooks.json"
+}

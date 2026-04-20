@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "command": "bash ${RELAY_PLUGIN_ROOT:-$(dirname $(dirname $0))}/hooks/scripts/pre-tool-use.sh"
+      }
+    ],
+    "SessionStart": [
+      {
+        "command": "bash ${RELAY_PLUGIN_ROOT:-$(dirname $(dirname $0))}/hooks/scripts/session-start.sh"
+      }
+    ]
+  }
+}
