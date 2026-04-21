@@ -9,7 +9,7 @@
  *   node install.js
  *
  * Or via curl:
- *   curl -fsSL https://raw.githubusercontent.com/<user>/relay/main/scripts/install.js | node
+ *   curl -fsSL https://raw.githubusercontent.com/Genb2nu/relay/main/scripts/install.js | node
  */
 
 const { execSync } = require("child_process");

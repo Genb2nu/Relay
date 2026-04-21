@@ -5,11 +5,11 @@ Relay plugin.
 
 ## Agent Persona Format
 
-All agent personas live in `agents/<name>.md` and follow this structure:
+All agent personas live in `agents/<n>.agent.md` and follow this structure:
 
 ```yaml
 ---
-name: <agent_codename>         # lowercase, matches filename
+name: <agent_codename>         # lowercase, matches filename (without .agent.md)
 description: |                 # multi-line description
   What this agent does and when to invoke it.
 model: opus | sonnet           # default model tier
@@ -23,6 +23,10 @@ tools:                         # allowed tool list
 ```
 
 Below the frontmatter is the agent's system prompt in Markdown.
+
+> **Why `.agent.md`?** Both Claude Code and GitHub Copilot CLI (and Copilot in
+> VS Code) read `*.agent.md` files from the `agents/` directory. One file works
+> on all three surfaces — no duplication, no symlinks, no build step.
 
 ## Rules for Agent Personas
 
@@ -39,7 +43,7 @@ Below the frontmatter is the agent's system prompt in Markdown.
 
 ## Skill Format
 
-Skills live in `skills/<name>/SKILL.md` and follow the standard YAML frontmatter
+Skills live in `skills/<n>/SKILL.md` and follow the standard YAML frontmatter
 format used by both Superpowers and Microsoft's power-platform-skills:
 
 ```yaml
@@ -58,7 +62,7 @@ allowed_tools:
 
 ## Command Format
 
-Commands live in `commands/<name>.md` with:
+Commands live in `commands/<n>.md` with:
 
 ```yaml
 ---
@@ -73,6 +77,22 @@ trigger_keywords:
 
 Hooks live in `hooks/scripts/` and are registered in `hooks/hooks.json`.
 Exit codes: 0 = allow, 2 = block. Scripts receive tool input on stdin as JSON.
+
+## Plugin Manifest
+
+`plugin.json` uses directory references, not individual file lists:
+
+```json
+{
+  "agents": "agents/",
+  "skills": "skills/",
+  "commands": "commands/",
+  "hooks": "hooks/hooks.json"
+}
+```
+
+This means adding a new `agents/newagent.agent.md` is automatically picked up
+on next install/reload — no manifest edit required.
 
 ## Testing Changes
 

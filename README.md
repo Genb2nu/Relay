@@ -48,31 +48,44 @@ Also complete the [Dataverse MCP labs](https://github.com/microsoft/Dataverse-MC
 
 ## Installation
 
+Relay works on **Claude Code**, **GitHub Copilot CLI**, and **Copilot in VS Code** from the same repo — no duplicated files, no extra steps per tool.
+
 ### Claude Code
 
 ```
-/plugin marketplace add Genb2nu/relay
+/plugin marketplace add Genb2nu/Relay
 /plugin install relay@relay-marketplace
 ```
 
 ### GitHub Copilot CLI
 
-```
-copilot plugin marketplace add Genb2nu/relay
-copilot plugin install relay@relay-marketplace
+```bash
+copilot plugin install Genb2nu/Relay
 ```
 
-### Local development
+### Copilot in VS Code (Preview)
+
+1. Enable `chat.plugins.enabled` in VS Code settings
+2. Open Command Palette → `Chat: Install Plugin From Source`
+3. Enter `https://github.com/Genb2nu/Relay`
+
+Or add as a persistent marketplace in `settings.json`:
+```json
+"chat.plugins.marketplaces": ["Genb2nu/Relay"]
+```
+Then search `@agentPlugins` in the Extensions view.
+
+### Local development (single session, no install)
 
 ```bash
-git clone https://github.com/Genb2nu/relay.git
-cd relay
+git clone https://github.com/Genb2nu/Relay.git
+cd Relay
 
-# Claude Code
-claude --plugin-dir /path/to/relay
+# Claude Code — test without installing
+claude --plugin-dir /path/to/Relay
 
-# Copilot CLI
-copilot --plugin-dir /path/to/relay
+# Copilot CLI — test without installing
+copilot --plugin-dir /path/to/Relay
 ```
 
 ## Quick Start
