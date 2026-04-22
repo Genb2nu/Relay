@@ -15,6 +15,8 @@ You describe what you want to build. Relay runs a squad of specialists:
 | Plan Reviewer | **Auditor** | Reviews plan for completeness and technical soundness |
 | Security Architect | **Warden** | Reviews security design, tests access boundaries |
 | Adversarial Reviewer | **Critic** | Red-teams the approved plan before build starts |
+| UI Designer | **Stylist** | Produces the design system (colours, typography, spacing) for Canvas Apps |
+| Solution Mapper | **Analyst** | Maps existing deployed solutions for change requests and audits |
 | Dataverse Engineer | **Vault** | Creates tables, columns, relationships, security roles |
 | Developer | **Forge** | Builds apps, flows, and custom code |
 | Tester | **Sentinel** | Verifies build against the approved plan |

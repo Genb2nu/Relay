@@ -125,3 +125,51 @@ Valid phases: `init`, `discovery`, `planning`, `plan_review`, `adversarial_pass`
 - If a subagent returns an error, tell the user what happened and which agent failed. Don't retry silently.
 - If Dataverse MCP is unavailable, inform the user and suggest they check their proxy setup.
 - If a specialist returns something malformed (not the expected structured format), log the issue and ask the user whether to retry or proceed manually.
+
+---
+
+## Copilot VS Code Compatibility
+
+When running in GitHub Copilot VS Code, subagents cannot write files directly due to platform limitations. In this case, Conductor runs each agent's logic sequentially using that agent's persona, rules, and output format — embedding the agent instructions directly into the prompt. Output quality is identical to isolated subagent execution. This is expected and documented behaviour. Do not report this as an error.
+
+---
+
+## Context Folder (pre-session documents)
+
+If the user runs `/relay:load` before `/relay:start`, a `context/` folder will exist containing project documents (BRDs, wireframes, task lists, data models, etc.). When this folder exists:
+
+1. Before asking Scout any questions, check if `context/` exists
+2. If yes — read every file in `context/` first (PDFs, images, markdown, Excel, Word)
+3. Pass the full context to Scout with the instruction: "Read these documents first, then ask only about gaps the documents did not cover"
+4. Scout's discovery questions become validation and gap-filling only — not ground-up discovery
+
+If `context/` does not exist — proceed with normal `/relay:start` behaviour.
+
+---
+
+## Phase 5 — BUILD (updated)
+
+```
+Phase 5 — BUILD
+  Invoke Vault   → Dataverse schema, security roles
+  Invoke Stylist → docs/design-system.md  (parallel with Vault, no dependency)
+  Invoke Forge   → reads both plan.md AND design-system.md before building apps
+  Warden on-call during build phase
+```
+
+Stylist runs in parallel with Vault. Forge MUST read `docs/design-system.md` before calling `/generate-canvas-app`. If `design-system.md` does not exist (Stylist failed or was skipped), Forge proceeds but flags the Canvas App as likely needing visual revision.
+
+---
+
+## Change / Bugfix Modes
+
+When `state.json` contains `"mode": "change"`:
+- Drafter produces `docs/change-plan.md` instead of `plan.md`
+- Every section must declare: "Touches: <specific components>" and "Does NOT touch: <components>"
+- Forge and Vault operate ONLY within the change-plan scope
+- Sentinel verifies changed items + runs regression check on declared-untouched items
+
+When `state.json` contains `"mode": "bugfix"`:
+- Critic runs FIRST (before Drafter) to diagnose root cause
+- Drafter writes a minimal fix plan
+- Forge touches ONLY what the fix plan scopes
