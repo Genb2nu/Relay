@@ -173,3 +173,119 @@ When `state.json` contains `"mode": "bugfix"`:
 - Critic runs FIRST (before Drafter) to diagnose root cause
 - Drafter writes a minimal fix plan
 - Forge touches ONLY what the fix plan scopes
+
+---
+
+## Component ID Coordination (prevents duplicates)
+
+When Vault creates an App Module, Security Role, FLS Profile, or Connection Reference,
+it MUST write the component ID to `.relay/state.json` under `"components"`:
+
+```json
+{
+  "components": {
+    "app_modules": { "leave_request_admin": "9131ec48-013e-f111-88b4-7ced8db4fda0" },
+    "security_roles": { "employee": "d7178801-fd3d-f111-88b4-7ced8db4fda0" },
+    "fls_profiles": { "status_protection": "fe16da23-fd3d-f111-88b4-7ced8db4915f" }
+  }
+}
+```
+
+Before Forge creates ANY component, it MUST check `state.json` first.
+If the component ID exists → modify the existing one, never create a new one.
+This prevents duplicate app modules, duplicate connection references, etc.
+
+---
+
+## Automation-first principle
+
+Relay's goal is to automate everything that can be automated. Before any agent
+declares something "manual", check the automation capability map in forge.agent.md.
+
+The only items that are genuinely manual across ALL Power Platform projects:
+1. OAuth connection reference linking (browser OAuth required)
+2. Turning flows ON after import (Microsoft policy)
+3. Business rules in the rule designer (no public API)
+4. Canvas App first-time data source OAuth connection
+
+Everything else — including FLS assignment, security role assignment to users,
+MDA sitemap, form XML, flow JSON — CAN and MUST be automated.
+
+---
+
+## Embedded Skills (no external dependencies needed)
+
+Relay includes all workflow skills it needs — no Superpowers installation required.
+Agents reference these skills directly from the Relay skills directory:
+
+| Skill | Used by | Purpose |
+|---|---|---|
+| relay-discovery | Scout | Socratic discovery, one-question-at-a-time requirements gathering |
+| relay-planning | Drafter | Structured plan writing with full schema specs |
+| relay-orchestration | Conductor | Phase dispatch, state management, gate enforcement |
+| relay-parallel-agents | Conductor | Phase 3 + 5 + 6 parallel agent coordination |
+| relay-verification | Sentinel | Evidence-based build verification |
+| relay-debugging | Critic (bugfix mode) | Systematic root cause analysis |
+| relay-workflow | Conductor | Full workflow reference |
+| power-platform-security-patterns | Warden | Security patterns and anti-patterns |
+| power-platform-footgun-checklist | Critic | 23-item footgun checklist |
+| power-platform-alm | Vault + Forge | ALM patterns, flow import, FLS assignment |
+| power-fx-patterns | Forge | Power Fx patterns including current-user filter |
+| canvas-app-design-patterns | Stylist | Colour tokens, WCAG ratios, component patterns |
+
+## Required external plugins: Microsoft Power Platform Skills
+
+All 4 Power Platform skills are required. Relay is a Power Platform tool and each skill covers a different component type:
+
+| Plugin | Commands | Used when |
+|---|---|---|
+| canvas-apps | /configure-canvas-mcp, /generate-canvas-app, /edit-canvas-app | Any Canvas App in the plan |
+| model-apps | /genpage | Custom React-coded pages in Model-Driven Apps |
+| power-pages | /create-site | Power Pages portals |
+| code-apps | Code app scaffolding | Vite/React code apps |
+
+Install all 4 upfront — a project may need any of them.
+
+Superpowers is NOT required. All orchestration and workflow skills are embedded in Relay.
+
+---
+
+## Dataverse MCP Setup
+
+Vault, Warden, and Analyst require Dataverse MCP access to read/write tables,
+records, schema, and security configuration. Two options — either works:
+
+### Option A — Microsoft cloud Dataverse MCP (recommended)
+Simpler setup, no local install required.
+
+Prerequisites:
+1. Power Platform Admin Center → Environment → Settings → Product → Features
+   → Enable "Allow MCP clients to interact with Dataverse MCP server"
+2. Advanced Settings → Enable "Microsoft GitHub Copilot" client
+
+VS Code setup (Copilot):
+- Ctrl+Shift+P → "MCP: Add Server" → "HTTP or Server Sent Events"
+- URL: `https://<your-org>.crm5.dynamics.com/api/mcp`
+- Find your org URL: make.powerapps.com → Settings gear → Session details → Instance URL
+
+Copilot CLI / mcp-config.json:
+```json
+{
+  "mcpServers": {
+    "DataverseMcp": {
+      "type": "http",
+      "url": "https://<your-org>.crm5.dynamics.com/api/mcp"
+    }
+  }
+}
+```
+
+Available tools: create_record, read_query, update_record, delete_record,
+list_tables, describe_table, search, fetch, Create Table, Update Table, Delete Table
+
+Billing note: Copilot Credits charged from Dec 15, 2025 for agents outside
+Copilot Studio. Dynamics 365 Premium and M365 Copilot USL licences are exempt.
+
+### Option B — Local proxy (older approach)
+Install via dotnet: `dotnet tool install --global Microsoft.PowerPlatform.Dataverse.MCP`
+See: https://github.com/microsoft/Dataverse-MCP for full setup.

@@ -197,3 +197,83 @@ steps:
 - **"Component already exists"**: Another solution owns this component. Check solution layering.
 - **"Missing dependency"**: Import prerequisite solutions first.
 - **"Plugin step registration failed"**: Assembly version mismatch. Re-build and re-export.
+
+---
+
+## Power Automate Flow Automation via Solution Import
+
+Flows can be fully automated by generating JSON definitions and importing them via solution.
+
+### Flow JSON Structure (simplified)
+```json
+{
+  "name": "Leave Request — Approval Notification",
+  "properties": {
+    "definition": {
+      "triggers": {
+        "When_a_row_is_added": {
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "host": { "connectionName": "shared_commondataserviceforapps" },
+            "parameters": {
+              "subscriptionRequest/message": 1,
+              "subscriptionRequest/entityname": "cr_leaverequest"
+            }
+          }
+        }
+      },
+      "actions": {
+        "Get_Employee": { ... },
+        "Get_Manager": { ... },
+        "Send_email": { ... }
+      },
+      "contentVersion": "1.0.0.0",
+      "$schema": "..."
+    },
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "connectionName": "cr_DataverseConnection",
+        "id": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+      }
+    }
+  }
+}
+```
+
+### Import Pattern
+```powershell
+# Pack flow into solution
+pac solution export --name LeaveRequestSystem --path ./solution.zip
+# Add flow JSON and connection references to solution XML
+# Reimport
+pac solution import --path ./solution-with-flows.zip --force-overwrite --publish-changes --activate-plugins
+```
+
+### Post-import manual steps (document exactly, don't skip)
+1. Power Automate → Solutions → `<solution>` → Connection References → connect each
+2. Cloud Flows → select each flow → Turn on
+
+## FLS Assignment via API
+
+```powershell
+# Assign FLS profile to security role team (preferred pattern)
+$orgUrl = "https://<org>.crm5.dynamics.com"
+$token = (az account get-access-token --resource $orgUrl | ConvertFrom-Json).accessToken
+$h = @{ Authorization = "Bearer $token"; "Content-Type" = "application/json" }
+
+# Create a team for each security role, assign FLS profile to team
+# Then assign users to teams (easier to manage than direct user FLS assignment)
+```
+
+## Security Role Assignment via PAC CLI
+
+```bash
+# Assign role to user
+pac admin assign-user \
+  --user "user@domain.com" \
+  --role "Leave Request Employee" \
+  --environment "https://org.crm5.dynamics.com"
+
+# List users to verify
+pac admin list-app-user --environment "https://org.crm5.dynamics.com"
+```

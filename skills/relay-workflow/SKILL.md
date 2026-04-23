@@ -89,3 +89,33 @@ Conductor reads this file at session start and updates it at every phase transit
 3. Critic is checklist-first (cheap) then adversarial (expensive, only if needed)
 4. Plan phase and build phase should ideally run in separate sessions
 5. Use `/compact` between phases if context grows large
+
+---
+
+## Dataverse MCP — Tools Available to Vault, Warden, Analyst
+
+When Dataverse MCP is connected, these tools are available:
+
+| Tool | Used by | Purpose |
+|---|---|---|
+| list_tables | Vault, Analyst | Discover existing tables in the environment |
+| describe_table | Vault, Analyst | Get schema of a specific table |
+| create_record | Vault, Forge | Insert rows (seed data, test data) |
+| read_query | Vault, Warden, Analyst, Sentinel | Query records with SELECT |
+| update_record | Vault, Forge | Update existing rows |
+| delete_record | Vault | Delete rows (cleanup, test data) |
+| Create Table | Vault | Create new Dataverse table |
+| Update Table | Vault | Modify table schema/metadata |
+| search | Analyst | Full-text search across Dataverse |
+| fetch | Analyst, Sentinel | Retrieve specific record by ID |
+
+### Connection URL pattern
+```
+https://<org-name>.crm5.dynamics.com/api/mcp
+```
+Org URL found at: make.powerapps.com → Settings gear → Session details → Instance URL
+
+### Enabling in Power Platform Admin Center
+1. PPAC → Environments → select env → Settings → Product → Features
+2. Enable: "Allow MCP clients to interact with Dataverse MCP server"
+3. Advanced Settings → enable "Microsoft GitHub Copilot" client

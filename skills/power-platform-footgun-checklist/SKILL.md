@@ -111,3 +111,28 @@ review after completing the full checklist.
 3. Write results into `docs/critic-report.md` using the critic report template
 4. If ANY item is FAIL, proceed to Mode 2 (free-form adversarial review)
 5. If ALL items are PASS or N/A, approve immediately
+
+### 19. /genpage used for standard MDA configuration
+- **What to check**: If Forge used /genpage to configure MDA sitemap, forms, or views
+- **Why it matters**: /genpage builds custom React/TypeScript coded pages only. Using it for standard configuration fails silently or produces wrong output. Standard MDA config uses Dataverse API to patch sitemap/form XML.
+- **Mark N/A if**: No model-driven app in the solution, or /genpage was only used for actual custom coded pages.
+
+### 20. Duplicate app modules or components
+- **What to check**: Does state.json track all created component GUIDs? Did Forge check state.json before creating any app module, connection reference, or other named component?
+- **Why it matters**: Without state coordination, Forge creates duplicate app modules when it can't find the one Vault created (naming mismatch). Leads to "two Leave Request Admin apps" problem.
+- **Mark N/A if**: No app modules or shared components in the solution.
+
+### 21. FLS profile assignment automated
+- **What to check**: Were FLS profile assignments automated via Dataverse API, or incorrectly declared "manual"?
+- **Why it matters**: FLS assignment IS automatable via `systemuserprofiles` and `teamprofiles` endpoints. Leaving it manual wastes user time unnecessarily.
+- **Mark N/A if**: No FLS profiles in the solution.
+
+### 22. Security role assignment to users automated
+- **What to check**: Were security role assignments automated via `pac admin assign-user`, or incorrectly declared "manual"?
+- **Why it matters**: PAC CLI can assign roles to known users. Only skip automation if users aren't known at build time.
+- **Mark N/A if**: User list not known at build time (acceptable reason to leave manual with documented instructions).
+
+### 23. Flow import automation attempted
+- **What to check**: Were Power Automate flows generated as JSON and imported via solution, or incorrectly skipped as "not automatable"?
+- **Why it matters**: Flows ARE automatable via solution import. Only connection linking and flow activation are genuinely manual.
+- **Mark N/A if**: No flows in the solution.
