@@ -72,3 +72,51 @@ Security roles created: <N>
 Issues encountered: <N> (list if any)
 Notes: <any conservative choices you made>
 ```
+
+---
+
+## FLS Profile Assignment (automate — not manual)
+
+After creating FLS profiles, assign them to security roles and users/teams via Dataverse API.
+This is automatable — do NOT mark it as manual.
+
+```powershell
+# Get auth token
+$token = (az account get-access-token --resource "https://orgXXX.crm5.dynamics.com" | ConvertFrom-Json).accessToken
+$headers = @{ Authorization = "Bearer $token"; "Content-Type" = "application/json"; "OData-Version" = "4.0" }
+$orgUrl = "https://orgXXX.crm5.dynamics.com"
+
+# Assign FLS profile to a user
+$body = @{
+  "FieldSecurityProfileId@odata.bind" = "/fieldsecurityprofiles(<profile-guid>)"
+  "SystemUserId@odata.bind"           = "/systemusers(<user-guid>)"
+} | ConvertTo-Json
+Invoke-RestMethod -Method POST -Uri "$orgUrl/api/data/v9.2/systemuserprofiles" -Headers $headers -Body $body -ContentType "application/json"
+
+# Assign FLS profile to a team
+$body = @{
+  "FieldSecurityProfileId@odata.bind" = "/fieldsecurityprofiles(<profile-guid>)"
+  "TeamId@odata.bind"                 = "/teams(<team-guid>)"
+} | ConvertTo-Json
+Invoke-RestMethod -Method POST -Uri "$orgUrl/api/data/v9.2/teamprofiles" -Headers $headers -Body $body -ContentType "application/json"
+```
+
+When specific users/teams aren't known at build time, create the profiles and document
+the assignment step with exact API calls the user can run — do not simply say "do manually."
+
+## State Coordination with Forge
+
+Write all created component IDs to `state.json` under `"components"`:
+```json
+{
+  "components": {
+    "app_modules": { "<name>": "<guid>" },
+    "security_roles": { "<name>": "<guid>" },
+    "fls_profiles": { "<name>": "<guid>" },
+    "connection_references": { "<name>": "<guid>" }
+  }
+}
+```
+
+Forge reads this to find existing components instead of creating duplicates.
+This prevents the "two Leave Request Admin apps" problem observed in the pilot.
