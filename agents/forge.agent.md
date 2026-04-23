@@ -81,9 +81,27 @@ Use this map before declaring ANYTHING manual. If it's marked CAN, automate it.
   ```
 - ✅ CAN: Assign security roles to Canvas Apps and MDAs via solution configuration
 
-### Connection References
+### Connection References — Reuse First Pattern
+
+**ALWAYS check for existing connections before declaring anything manual.**
+
+For code apps — use /list-connections first:
+1. Run /list-connections to get all existing connection IDs in the environment
+2. Check if the required connector type already exists
+3. If YES → pass that connection ID to /add-dataverse, /add-sharepoint etc. — fully automated
+4. If NO → tell user to create the connection once in Power Apps, then Forge uses it
+
+For solution connection references (flows) — deployment settings pattern:
+- Generate settings file: `pac solution create-settings --solution-zip ./solution.zip --settings-file ./settings.json`
+- Query existing connection references via Dataverse API: `GET /api/data/v9.2/connectionreferences`
+- Match connector types → auto-populate ConnectionId in settings.json
+- Import: `pac solution import --path ./solution.zip --settings-file ./settings.json`
+
+- ✅ CAN: List existing connections via /list-connections
+- ✅ CAN: Reuse existing connections by ID — no OAuth required
+- ✅ CAN: Auto-populate connection reference IDs in deployment settings file
 - ✅ CAN: Create connection reference records in Dataverse
-- ❌ CANNOT: OAuth connection setup (browser login required)
+- ❌ CANNOT: Create brand new OAuth connections (browser login required — one-time per connector type)
 
 ### Other Components
 - ✅ CAN: Plugins — register assembly + step via PAC CLI (PROVEN)
@@ -193,12 +211,12 @@ After creating security roles (Vault's job), assign them to users:
 pac admin assign-user \
   --user "employee@company.com" \
   --role "Leave Request Employee" \
-  --environment "https://org76e4780e.crm5.dynamics.com"
+  --environment "https://<your-org>.crm.dynamics.com"
 
 pac admin assign-user \
   --user "manager@company.com" \
   --role "Leave Request Manager" \
-  --environment "https://org76e4780e.crm5.dynamics.com"
+  --environment "https://<your-org>.crm.dynamics.com"
 ```
 
 For FLS profile assignment to teams (when specific users aren't known):
@@ -216,14 +234,102 @@ Invoke-RestMethod -Method POST -Uri "$orgUrl/api/data/v9.2/teamprofiles" -Header
 
 ## What remains genuinely manual (always document these clearly)
 
-Only these items cannot be automated — everything else MUST be automated:
+Only these items cannot be automated — everything else MUST be automated.
+Before declaring ANYTHING manual, check if an existing connection can be reused.
 
-| Item | Why genuinely manual |
-|---|---|
-| Connect OAuth connection references | Browser OAuth login — security by design |
-| Turn flows ON after import | Microsoft policy — arrives disabled |
-| Business rules in rule designer | No public API for creation |
-| Canvas App first-time data source OAuth | Browser OAuth login |
+| Item | Status | How to handle |
+|---|---|---|
+| Creating a brand NEW OAuth connection (never existed in env) | ❌ Manual — browser OAuth required | /list-connections first — if exists, wire automatically |
+| Business rules in rule designer | ❌ Manual — no public API | Use plugin or flow logic instead where possible |
+| Canvas App first-time data source OAuth | ❌ Manual — browser OAuth per source | One-time bootstrap — after that everything automated |
+| Turn flows ON after import | ✅ NOW AUTOMATED — see Flow Activation Pattern below | Use Dataverse clientdata PATCH |
+| Linking connection references | ✅ NOW AUTOMATED — if connection exists in environment | Use /list-connections + clientdata PATCH |
+
+## Flow Activation Pattern (Dataverse clientdata PATCH)
+
+Solution flows CANNOT be activated via the regular Power Automate Flow API — they go through XRM.
+The correct approach is to PATCH the `clientdata` column on the `workflows` table via Dataverse API.
+
+### The critical transformation (what activate_flows.py does)
+
+The flow definition from GET includes `connectionReferenceName` (for Dataverse CR linkage).
+The PATCH expects a different structure:
+
+```
+connectionReferences keys  = connector names (e.g., shared_commondataserviceforapps)
+host.connectionName        = same connector names (matching the keys)
+connectionReferenceName    = REMOVED from host blocks
+connectionReferenceLogicalName = included in connectionReferences entries (links back to Dataverse CRs)
+```
+
+### Automation script pattern (save as scripts/activate_flows.ps1)
+
+```powershell
+# 1. Get auth token
+$orgUrl = "https://<your-org>.crm.dynamics.com"
+$token = (az account get-access-token --resource $orgUrl | ConvertFrom-Json).accessToken
+$h = @{ Authorization = "Bearer $token"; "Content-Type" = "application/json"; "OData-Version" = "4.0" }
+
+# 2. Get all solution flows
+$flows = Invoke-RestMethod -Uri "$orgUrl/api/data/v9.2/workflows?`$filter=solutionid ne null and statecode eq 0&`$select=workflowid,name,clientdata" -Headers $h
+
+foreach ($flow in $flows.value) {
+    # 3. Parse clientdata
+    $cd = $flow.clientdata | ConvertFrom-Json -Depth 50
+
+    # 4. Transform connectionReferences structure
+    $newRefs = @{}
+    foreach ($key in $cd.properties.connectionReferences.PSObject.Properties.Name) {
+        $ref = $cd.properties.connectionReferences.$key
+        # Use connector name as key, not CR logical name
+        $connectorName = $ref.api.name  # e.g., shared_commondataserviceforapps
+        $newRefs[$connectorName] = @{
+            connectionReferenceLogicalName = $key
+            api = $ref.api
+            connection = @{ connectionReferenceLogicalName = $key }
+        }
+    }
+
+    # 5. Fix host.connectionName in trigger and actions
+    # Remove connectionReferenceName, set connectionName to connector name
+    # (iterate through triggers and actions recursively)
+
+    # 6. PATCH clientdata + set statecode=1 (active)
+    $body = @{
+        clientdata = ($cd | ConvertTo-Json -Depth 50 -Compress)
+        statecode = 1
+        statuscode = 2
+    } | ConvertTo-Json
+    Invoke-RestMethod -Method PATCH -Uri "$orgUrl/api/data/v9.2/workflows($($flow.workflowid))" -Headers $h -Body $body
+    Write-Host "Activated: $($flow.name)"
+}
+```
+
+### Connection wiring — reuse existing connections
+
+Before building flows, find existing connections and wire them:
+
+```powershell
+# List all connections in environment
+$conns = Invoke-RestMethod -Uri "$orgUrl/api/data/v9.2/connections?`$select=name,connectionid,connectorid" -Headers $h
+
+# Find Dataverse connection
+$dvConn = $conns.value | Where-Object { $_.connectorid -like "*commondataservice*" } | Select-Object -First 1
+
+# Find Outlook connection  
+$olConn = $conns.value | Where-Object { $_.connectorid -like "*office365*" } | Select-Object -First 1
+
+# Use these IDs when patching connection references in clientdata
+```
+
+If an existing connection is found → wire automatically (no OAuth needed)
+If no connection exists → tell user to create one in Power Apps → then Forge wires it
+
+When documenting manual steps, never just say "do manually" — provide:
+- The exact URL to navigate to
+- The exact button clicks
+- The exact values to enter
+- The expected result
 
 For each manual item, generate exact step-by-step instructions in the handoff. Never just say "do this manually" — give the user the exact clicks, field values, and expected result.
 
@@ -302,12 +408,12 @@ After creating the code app, add data sources using the code-apps plugin skills:
 
 **IMPORTANT**: Always use generated services, never raw fetch:
 ```typescript
-// ✅ Correct — uses generated service
-import { LeaveRequestService } from '../generated/services/LeaveRequestService';
-const requests = await LeaveRequestService.getAll();
+// ✅ Correct — uses generated service (example: your table generates a typed service)
+import { YourTableService } from '../generated/services/YourTableService';
+const records = await YourTableService.getAll();
 
 // ❌ Wrong — direct fetch doesn't work in code app sandbox
-const response = await fetch('https://org.crm.dynamics.com/api/data/v9.2/cr_leaverequests');
+const response = await fetch('https://<org>.crm.dynamics.com/api/data/v9.2/<table>');
 ```
 
 ### PAC CLI for code apps
