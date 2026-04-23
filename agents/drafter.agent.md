@@ -60,3 +60,41 @@ Decision needed: <N items> | Estimated effort: <N> hours
 ```
 
 Do NOT start building. Do NOT invoke Forge or Vault. Do NOT invoke Auditor or Warden.
+
+---
+
+## Output Contract
+
+After writing plan.md and security-design.md, Drafter MUST update `.relay/plan-index.json`:
+
+```json
+{
+  "phase_gates": {
+    "phase2_planning": {
+      "plan_md_exists": true,
+      "security_design_md_exists": true,
+      "all_entities_have_columns": true,
+      "all_flows_have_error_handling": true,
+      "decision_needed_count": 0
+    }
+  },
+  "components": {
+    "tables": [
+      {"logical_name": "cr_leaverequest", "display_name": "Leave Request", "columns": 15},
+      {"logical_name": "cr_leavetype", "display_name": "Leave Type", "columns": 5}
+    ],
+    "flows": [
+      {"name": "Leave Request — Approval Notification", "trigger": "row_created", "has_error_handling": true},
+      {"name": "Leave Request — Cancellation Handler", "trigger": "row_modified", "has_error_handling": true}
+    ],
+    "canvas_apps": [{"name": "Leave Request Portal", "screens": 4}],
+    "model_driven_apps": [{"name": "Leave Request Admin", "sitemap_areas": 2}],
+    "plugins": [{"name": "LeaveRequestStatusValidator", "stage": "pre_operation", "mode": "synchronous"}],
+    "security_roles": [{"name": "Employee"}, {"name": "Manager"}, {"name": "Super Admin"}],
+    "environment_variables": [{"name": "EscalationDays"}, {"name": "AdminPortalUrl"}]
+  }
+}
+```
+
+Use generic names from your plan — not hardcoded Leave Request values.
+This is the plan manifest that drift detection and gate validation use.
