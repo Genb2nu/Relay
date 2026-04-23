@@ -68,8 +68,8 @@ graph TB
         scrNew[New Request]
     end
     subgraph Dataverse
-        T1[(cr_leaverequest)]
-        T2[(cr_leavetype)]
+        T1[(<table_name>)]
+        T2[(<table_name_2>)]
     end
     Canvas App --> Dataverse
 ```
@@ -88,11 +88,11 @@ flowchart LR
 ```mermaid
 graph LR
     subgraph Employee Role
-        E1[cr_leaverequest: Create/Read Own]
-        E2[cr_leavetype: Read All]
+        E1[<table>: Create/Read Own]
+        E2[<table>: Read All]
     end
     subgraph Manager Role
-        M1[cr_leaverequest: Read/Write BU]
+        M1[<table>: Read/Write BU]
     end
 ```
 

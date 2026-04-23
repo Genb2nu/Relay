@@ -192,3 +192,16 @@ See [AGENTS.md](AGENTS.md) for conventions on writing agents, skills, commands, 
 ## License
 
 MIT
+
+---
+
+## ⚠️ Important — Project Files vs Plugin Files
+
+Relay is a **plugin** — not a project workspace. When Relay runs on a project:
+
+- Project files live in **your project folder** (`.relay/`, `docs/`, `src/`, `scripts/`)
+- Plugin files stay in the **Relay plugin folder** (agents, commands, skills)
+
+**Copilot VS Code caching issue**: The plugin reads files from its install cache. If Conductor ever writes project-specific content into plugin files (shouldn't happen, but may during early preview), uninstall and reinstall the plugin to get a clean copy.
+
+If you notice project-specific content (real org URLs, solution names, GUIDs) appearing in plugin agent files, report it as a bug — plugin files should only contain generic, reusable patterns.

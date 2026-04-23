@@ -60,14 +60,14 @@ When the user invokes this command:
    ## Components being modified
    | Component | Current state | New state | Risk |
    |---|---|---|---|
-   | cr_leaverequest | 15 columns | +1 column: cr_category | Low |
+   | <table_logical_name> | <N> columns | +1 column: <new_column> | Low |
    | Approval flow | 3 steps | +1 condition for cr_category | Medium |
 
    ## Components explicitly NOT touched
    | Component | Reason not touched |
    |---|---|
    | Canvas App scrHome | No UI change required |
-   | cr_leavebalance table | Balance logic unchanged |
+   | <other_table> | Logic unchanged |
    | Employee security role | Permissions unchanged |
 
    ## New components being added

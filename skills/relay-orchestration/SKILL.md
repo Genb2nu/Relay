@@ -109,9 +109,9 @@ Conductor reads and writes this after every phase:
 
 ```json
 {
-  "project": "Leave Request System",
-  "solution": "LeaveRequestSystem",
-  "environment": "https://org76e4780e.crm5.dynamics.com",
+  "project": "<Your Project Name>",
+  "solution": "<YourSolutionName>",
+  "environment": "https://<your-org>.crm.dynamics.com",
   "mode": "greenfield",
   "phase": "build",
   "plan_locked": true,

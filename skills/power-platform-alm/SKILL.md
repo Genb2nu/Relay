@@ -217,7 +217,7 @@ Flows can be fully automated by generating JSON definitions and importing them v
             "host": { "connectionName": "shared_commondataserviceforapps" },
             "parameters": {
               "subscriptionRequest/message": 1,
-              "subscriptionRequest/entityname": "cr_leaverequest"
+              "subscriptionRequest/entityname": "<table_logical_name>"
             }
           }
         }
@@ -243,7 +243,7 @@ Flows can be fully automated by generating JSON definitions and importing them v
 ### Import Pattern
 ```powershell
 # Pack flow into solution
-pac solution export --name LeaveRequestSystem --path ./solution.zip
+pac solution export --name <YourSolutionName> --path ./solution.zip
 # Add flow JSON and connection references to solution XML
 # Reimport
 pac solution import --path ./solution-with-flows.zip --force-overwrite --publish-changes --activate-plugins
@@ -277,3 +277,98 @@ pac admin assign-user \
 # List users to verify
 pac admin list-app-user --environment "https://org.crm5.dynamics.com"
 ```
+
+---
+
+## Connection Reuse Pattern — Check Before Creating
+
+### For Code Apps
+Always run /list-connections FIRST to check for existing connections:
+```
+/list-connections
+```
+This returns all connections in the environment with their IDs and connector types.
+If a matching connector exists → use its ID with /add-dataverse, /add-sharepoint etc.
+If not → user creates it once in Power Apps → Forge uses it immediately after.
+
+### For Solution Connection References (Flows)
+Use the deployment settings file to auto-populate existing connection IDs:
+
+```powershell
+# Step 1 — Generate settings file (has empty ConnectionId slots)
+pac solution create-settings --solution-zip ./<YourSolutionName>.zip --settings-file ./deploy-settings.json
+
+# Step 2 — Query existing connection references in the environment
+$orgUrl = "https://<your-org>.crm.dynamics.com"
+$token = (az account get-access-token --resource $orgUrl | ConvertFrom-Json).accessToken
+$h = @{ Authorization = "Bearer $token"; "OData-Version" = "4.0" }
+$refs = Invoke-RestMethod -Uri "$orgUrl/api/data/v9.2/connectionreferences?`$select=connectionreferencelogicalname,connectionid,connectorid" -Headers $h
+
+# Step 3 — Match and populate settings.json
+# For each ConnectionReference in deploy-settings.json:
+#   Find matching connectorid in $refs
+#   If found → set ConnectionId to the existing value
+#   If not found → leave blank (user links manually)
+
+# Step 4 — Import with pre-populated settings
+pac solution import --path ./<YourSolutionName>.zip --settings-file ./deploy-settings.json --force-overwrite --publish-changes
+```
+
+### Connection ID via Power Apps URL
+If PAC CLI isn't available, get connection IDs from the URL:
+- make.powerapps.com → Data → Connections → click connection
+- URL format: `...connections/<connectionId>/details`
+- Extract the connectionId from the URL
+
+### When NO existing connection exists
+Tell the user exactly what to create (not just "create a connection"):
+> "I need a Dataverse connection in this environment. Please go to:
+> make.powerapps.com → Data → Connections → + New connection → search 'Dataverse' → Create
+> Once created, I'll pick it up automatically via /list-connections."
+
+---
+
+## Flow Activation via Dataverse clientdata PATCH
+
+**Critical finding from pilot**: Solution flows cannot be activated via the regular
+Power Automate Flow API. They must be activated via Dataverse API by PATCHing
+the `clientdata` column on the `workflows` table.
+
+### Why the regular Flow API fails for solution flows
+Solution flows go through XRM which has its own connection reference resolution.
+The regular Flow API expects `connectionName` but XRM resolves `connectionReferenceName`.
+The PATCH must transform the clientdata structure to use connector names as keys.
+
+### Required clientdata transformation
+```
+GET clientdata structure (from Dataverse):
+  connectionReferences:
+    cr_DataverseConnection:          ← CR logical name as key
+      connectionReferenceName: cr_DataverseConnection
+      api.name: shared_commondataserviceforapps
+
+PATCH clientdata structure (what XRM expects):
+  connectionReferences:
+    shared_commondataserviceforapps:  ← connector name as key
+      connectionReferenceLogicalName: cr_DataverseConnection
+      api.name: shared_commondataserviceforapps
+      connection: { connectionReferenceLogicalName: cr_DataverseConnection }
+  
+  In each trigger/action host block:
+    - REMOVE: connectionReferenceName
+    - SET: connectionName = connector name (e.g., shared_commondataserviceforapps)
+```
+
+### State values
+- statecode=0, statuscode=1 = Draft (inactive, just imported)
+- statecode=1, statuscode=2 = Active (running)
+
+### Connection reuse pattern
+Before creating new connections, search existing ones:
+```powershell
+$conns = Invoke-RestMethod -Uri "$orgUrl/api/data/v9.2/connections?`$select=name,connectionid,connectorid" -Headers $h
+$dvConn = $conns.value | Where-Object { $_.connectorid -like "*commondataservice*" } | Select-Object -First 1
+$olConn = $conns.value | Where-Object { $_.connectorid -like "*office365*" } | Select-Object -First 1
+```
+If found → wire automatically into clientdata connection references.
+If not found → user creates once in Power Apps → Forge queries and wires on next run.

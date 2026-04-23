@@ -184,9 +184,9 @@ it MUST write the component ID to `.relay/state.json` under `"components"`:
 ```json
 {
   "components": {
-    "app_modules": { "leave_request_admin": "9131ec48-013e-f111-88b4-7ced8db4fda0" },
-    "security_roles": { "employee": "d7178801-fd3d-f111-88b4-7ced8db4fda0" },
-    "fls_profiles": { "status_protection": "fe16da23-fd3d-f111-88b4-7ced8db4915f" }
+    "app_modules": { "<app-module-name>": "<guid>" },
+    "security_roles": { "<role-name>": "<guid>" },
+    "fls_profiles": { "<profile-name>": "<guid>" }
   }
 }
 ```
@@ -203,10 +203,15 @@ Relay's goal is to automate everything that can be automated. Before any agent
 declares something "manual", check the automation capability map in forge.agent.md.
 
 The only items that are genuinely manual across ALL Power Platform projects:
-1. OAuth connection reference linking (browser OAuth required)
-2. Turning flows ON after import (Microsoft policy)
-3. Business rules in the rule designer (no public API)
-4. Canvas App first-time data source OAuth connection
+1. Creating a BRAND NEW OAuth connection that has never existed in the environment
+   (if the connection type already exists, it can be found and wired automatically)
+2. Business rules in the rule designer (no public API)
+3. Canvas App first-time data source OAuth connection
+
+These are NOW AUTOMATED (previously thought manual):
+- Turning flows ON: use Dataverse clientdata PATCH (see forge.agent.md Flow Activation Pattern)
+- Connection reference linking: query existing connections + clientdata PATCH
+- Flow connection wiring: /list-connections + auto-populate existing connection IDs
 
 Everything else — including FLS assignment, security role assignment to users,
 MDA sitemap, form XML, flow JSON — CAN and MUST be automated.

@@ -145,7 +145,7 @@ Verified: <date> | Environment: <org url>
 ## Plugins
 | Assembly | Status | Evidence |
 |---|---|---|
-| LeaveRequestStatusValidator | ✅ PASS | Dataverse MCP pluginassemblies query |
+| <PluginAssemblyName> | ✅ PASS | Dataverse MCP pluginassemblies query |
 
 ## Apps
 | App | Screens/Views | Compile | Status |
