@@ -294,3 +294,83 @@ Copilot Studio. Dynamics 365 Premium and M365 Copilot USL licences are exempt.
 ### Option B — Local proxy (older approach)
 Install via dotnet: `dotnet tool install --global Microsoft.PowerPlatform.Dataverse.MCP`
 See: https://github.com/microsoft/Dataverse-MCP for full setup.
+
+---
+
+## Structured Contracts — plan-index.json
+
+Every Relay project maintains `.relay/plan-index.json` — a machine-readable contract
+alongside the human-readable markdown docs. This is NOT a replacement for markdown.
+It is the enforcement layer that makes quality gates deterministic.
+
+### Who writes what to plan-index.json
+
+| Agent | Writes to plan-index.json |
+|---|---|
+| Conductor | Initialises on project start; updates phase + gate status |
+| Scout | Updates phase1_discovery: persona_count, user_story_count, entity_count, sections_found |
+| Drafter | Updates phase2_planning: plan_md_exists, security_design_md_exists, entity columns, flow error handling |
+| Auditor | Updates phase3_review: auditor_approved, auditor_issues_found/resolved |
+| Warden | Updates phase3_review: warden_approved, warden_issues_found/resolved; phase6_verify: security_tests |
+| Critic | Updates phase4_adversarial: critic_approved, checklist counts, blocking issues |
+| Vault | Updates components: tables, security_roles, fls_profiles, env vars (with GUIDs) |
+| Forge | Updates components: flows, canvas_apps, model_driven_apps; phase5_build: components_built/partial/blocked |
+| Stylist | Updates phase5_build: stylist_complete |
+| Sentinel | Updates phase6_verify: sentinel_approved, drift_detected, drift_items |
+
+### Gate validation (MANDATORY before phase advancement)
+
+Conductor MUST run the gate check script before advancing to the next phase:
+
+```bash
+python scripts/relay-gate-check.py --phase <N>
+```
+
+If exit code = 1 → BLOCK advancement, report the specific failures to the user.
+If exit code = 0 → advance to next phase.
+
+### Execution logging (ALL agents)
+
+Every significant action must be logged to `.relay/execution-log.jsonl`:
+
+```python
+import json, datetime
+entry = {
+    "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+    "agent": "<agent-name>",
+    "event": "<event-type>",
+    "phase": "<phase-number>",
+    # optional details
+}
+with open(".relay/execution-log.jsonl", "a") as f:
+    f.write(json.dumps(entry) + "\n")
+```
+
+Standard event types:
+- `started`, `completed`, `failed`, `blocked`
+- `gate_passed`, `gate_failed`
+- `issue_found`, `issue_resolved`
+- `component_created`, `component_skipped`
+- `approval_given`, `approval_withheld`
+- `drift_detected`, `drift_clear`
+- `test_passed`, `test_failed`
+
+### Scoring
+
+After Phase 2 and Phase 4, Conductor runs:
+
+```bash
+python scripts/relay-score.py
+```
+
+Overall score below 70 → flag to user before advancing. Do not block, but report.
+
+### Drift detection
+
+During Phase 6, Sentinel runs:
+
+```bash
+python scripts/relay-drift-check.py --env <org-url>
+```
+
+Drift detected → update plan-index + generate docs/drift-report.md + block Phase 6 gate.

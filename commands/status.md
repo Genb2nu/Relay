@@ -1,46 +1,73 @@
 ---
-description: Show current phase, active agent, blockers, and next step for this Relay project.
+description: |
+  Show current project status using real execution data from plan-index.json
+  and execution-log.jsonl. Not a guess — actual system state.
 trigger_keywords:
   - relay status
-  - project status
+  - what phase
   - where are we
+  - what's done
+  - project status
 ---
 
 # /relay:status
 
-When the user invokes this command:
+When the user invokes this command, read `.relay/plan-index.json` and
+`.relay/execution-log.jsonl` to report actual system state.
 
-1. Read `.relay/state.json`. If it doesn't exist, say: "No Relay project found in this folder. Run `/relay:start` to begin."
+## Step 1 — Read both files
 
-2. Print a clear summary:
+```bash
+cat .relay/plan-index.json
+tail -50 .relay/execution-log.jsonl
+```
 
-   ```
-   Project: <project_name>
-   Phase: <phase> (<human-readable description>)
-   Last updated: <timestamp>
+## Step 2 — Report structured status
 
-   Artifacts:
-   ✓ requirements.md  (or ✗ not yet created)
-   ✓ plan.md          (or ✗ not yet created)  [LOCKED / unlocked]
-   ✓ security-design.md (or ✗)                [LOCKED / unlocked]
-   ...
+Output in this format:
 
-   Approvals:
-   Auditor: ✓ approved / ✗ pending / ⟳ reviewing
-   Warden: ✓ approved / ✗ pending / ⟳ reviewing
-   Critic: ✓ approved / ✗ pending / ⟳ reviewing
-   Sentinel: ✓ passed / ✗ pending / ⟳ testing
-   Warden (verification): ✓ passed / ✗ pending / ⟳ testing
+```
+## Relay Project Status
+Project: <name> | Solution: <solution> | Environment: <env>
 
-   Next step: <what needs to happen next>
-   ```
+## Phase Progress
+✅ Phase 1 — Discovery     (completed <timestamp>)
+✅ Phase 2 — Planning      (completed <timestamp> | score: <overall>/100)
+✅ Phase 3 — Review        (Auditor ✅ Warden ✅ | issues: <N> found, <N> resolved)
+✅ Phase 4 — Adversarial   (Critic ✅ | checklist: <N>/<N> | LOCKED ✅)
+🔵 Phase 5 — Build         (in progress)
+   Vault: ✅ | Stylist: ✅ | Forge: 🔵
+   Built: <N> tables, <N> flows, <N> apps
+   Partial: <list>
+   Blocked: <list>
+○ Phase 6 — Verify         (not started)
+○ Phase 7 — Ship           (not started)
 
-3. Phase descriptions:
-   - `init` → "Project initialised, waiting for brief"
-   - `discovery` → "Scout is gathering requirements"
-   - `planning` → "Drafter is writing the technical plan"
-   - `plan_review` → "Auditor + Warden are reviewing the plan"
-   - `adversarial_pass` → "Critic is red-teaming the approved plan"
-   - `building` → "Vault + Forge are building the solution"
-   - `verification` → "Sentinel + Warden are verifying the build"
-   - `complete` → "Project complete"
+## Quality Scores
+Completeness: <N>/100 | Security: <N>/100 | Testability: <N>/100 | Overall: <N>/100
+
+## Components
+Tables: <N> | Flows: <N> | Apps: <N> | Plugins: <N> | Security Roles: <N>
+
+## Recent Activity (last 10 events)
+<timestamp> [<agent>] <event>
+...
+
+## Next Step
+<specific action needed to advance — from plan-index gate failures>
+```
+
+## If plan-index.json doesn't exist
+
+Tell the user:
+"No active Relay project found. Run `/relay:start` to begin a new project
+or `/relay:load` to load existing project documents."
+
+## Blockers
+
+If any gate has failed, show the specific failures:
+```
+⚠️ BLOCKED: Phase 3 cannot advance
+  ✗ Auditor has not approved (2 issues unresolved)
+  ✗ Warden: self-approval risk not yet fixed in plan
+```

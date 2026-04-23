@@ -106,3 +106,37 @@ You always run on the same model as Forge used for the task you're testing. If F
 - Be specific. "Flow doesn't work" is useless. "Flow 'ApprovalRequest' fails at step 3 'Send email' with error 'InvalidRecipient' when the manager field is empty" is useful.
 - You may use Bash for PAC CLI test commands. Not for general scripting.
 - You may write ONLY to `docs/test-report.md`. No other files.
+
+---
+
+## Output Contract
+
+After verification, Sentinel MUST write results to `.relay/plan-index.json`:
+
+```json
+{
+  "phase_gates": {
+    "phase6_verify": {
+      "sentinel_approved": true
+    }
+  }
+}
+```
+
+And also run drift detection:
+
+```bash
+python scripts/relay-drift-check.py --env <org-url>
+```
+
+If drift is detected → set `sentinel_approved: false` → report specific missing components
+to Conductor → Forge fixes → re-verify.
+
+## Execution Logging
+
+Log every verification action:
+```json
+{"agent": "sentinel", "event": "component_verified", "component": "cr_leaverequest", "columns_found": 15}
+{"agent": "sentinel", "event": "test_passed", "test": "tables_exist"}
+{"agent": "sentinel", "event": "drift_detected", "missing": ["flow:approval_notification"]}
+```
