@@ -1,104 +1,214 @@
-# Relay — Agent Development Guidelines
+# Relay — Development Conventions
 
-This document describes the conventions for contributing to or extending the
-Relay plugin.
+This document covers conventions for contributing to Relay. Read this before editing agents, skills, commands, hooks, or scripts.
 
-## Agent Persona Format
-
-All agent personas live in `agents/<n>.agent.md` and follow this structure:
-
-```yaml
 ---
-name: <agent_codename>         # lowercase, matches filename (without .agent.md)
-description: |                 # multi-line description
-  What this agent does and when to invoke it.
-model: opus | sonnet           # default model tier
-tools:                         # allowed tool list
-  - Read
-  - Write
-  - Bash
-  - WebSearch
-  - Edit
----
+
+## Repository structure
+
+```
+relay/
+├── agents/              # Specialist agent personas (.agent.md)
+├── commands/            # Slash commands (.md)
+├── hooks/               # PreToolUse enforcement
+│   ├── hooks.json
+│   └── scripts/
+│       ├── pre-tool-use.sh         # Write/Edit restrictions
+│       ├── phase-gate-hook.sh      # Bash command gate enforcement
+│       └── session-start.sh
+├── schemas/             # plan-index.schema.json
+├── scripts/             # Python automation
+│   ├── relay-gate-check.py
+│   ├── relay-consistency-check.py
+│   ├── relay-drift-check.py
+│   └── relay-score.py
+├── skills/              # Embedded knowledge bases (SKILL.md per folder)
+├── templates/           # Document templates
+├── docs-internal/       # Internal guides (adversarial-pilot-guide.md)
+├── lib/                 # Shared bash utilities
+├── CLAUDE.md            # Conductor master instructions
+├── AGENTS.md            # This file
+└── README.md
 ```
 
-Below the frontmatter is the agent's system prompt in Markdown.
+---
 
-> **Why `.agent.md`?** Both Claude Code and GitHub Copilot CLI (and Copilot in
-> VS Code) read `*.agent.md` files from the `agents/` directory. One file works
-> on all three surfaces — no duplication, no symlinks, no build step.
+## Agent conventions (.agent.md)
 
-## Rules for Agent Personas
+Every agent file follows this structure:
 
-1. **Single responsibility.** Each agent does one job. If you're writing an
-   agent that does two things, it should be two agents.
-2. **Explicit tool restrictions.** List only the tools the agent needs. The
-   `PreToolUse` hook enforces this at runtime.
-3. **Structured handoff.** Every agent must end with a "Handoff" section that
-   defines the exact format of the return value to Conductor.
-4. **File write restrictions.** Specify which files the agent may write to.
-   The hook enforces this.
-5. **No cross-invocation.** Agents never invoke other agents. Only Conductor
-   dispatches subagents.
+```markdown
+---
+name: <codename>
+description: |
+  One paragraph. What this agent does, when it's invoked, what it produces.
+model: opus | sonnet
+tools:
+  - Read
+  - Write   # only if the agent writes files
+  - Edit    # only if the agent edits files
+  - Bash    # only if the agent runs commands
+  - WebSearch
+---
 
-## Skill Format
+# <Codename> — <Role>
 
-Skills live in `skills/<n>/SKILL.md` and follow the standard YAML frontmatter
-format used by both Superpowers and Microsoft's power-platform-skills:
+<Persona statement: "You are a senior X. You do Y.">
 
-```yaml
+## Rules
+<Numbered rules specific to this agent>
+
+## Output Contract
+<What the agent MUST write to plan-index.json after completing its work>
+
+## Execution Logging
+<What events the agent logs to execution-log.jsonl>
+
+## Handoff
+<Structured return to Conductor — 3-5 lines>
+```
+
+**Model assignment:**
+- Opus: Conductor, Drafter, Auditor, Warden, Critic (judgment-heavy)
+- Sonnet: Scout, Stylist, Analyst, Vault, Forge, Sentinel (execution-heavy)
+
+**Write restrictions are enforced by hooks:**
+
+| Agent | Can write to |
+|---|---|
+| Scout | `docs/requirements.md` only |
+| Drafter | `docs/plan.md`, `docs/security-design.md` |
+| Auditor | Nothing (read-only) |
+| Warden | `docs/security-design.md`, `docs/security-test-report.md` |
+| Critic | `docs/critic-report.md` only |
+| Stylist | `docs/design-system.md` |
+| Analyst | `docs/existing-solution.md` |
+| Vault | `scripts/*.ps1`, `src/solution/` |
+| Forge | `src/`, `scripts/` |
+| Sentinel | `docs/test-report.md`, `docs/drift-report.md` |
+
+---
+
+## Skill conventions (SKILL.md)
+
+Every skill folder contains a `SKILL.md` file:
+
+```markdown
 ---
 name: <skill-name>
 description: |
-  What knowledge this skill provides and when to reference it.
+  What this skill covers, when agents should reference it, trigger keywords.
 trigger_keywords:
   - keyword1
   - keyword2
 allowed_tools:
   - Read
-  - WebSearch
 ---
+
+# <Skill Title>
+
+<Content>
 ```
 
-## Command Format
+Skills are reference material, not instructions. They should be:
+- Specific to Power Platform (not generic coding advice)
+- Based on proven patterns (pilot-validated where possible)
+- Growing — add learnings after every new project
 
-Commands live in `commands/<n>.md` with:
-
-```yaml
 ---
-description: Short description shown in /help
+
+## Command conventions (.md)
+
+Commands are invoked by the user via `/relay:<name>`. Each file:
+
+```markdown
+---
+description: |
+  One paragraph. What this command does, when to use it.
 trigger_keywords:
-  - keyword1
-  - keyword2
+  - phrase1
+  - phrase2
 ---
+
+# /relay:<name>
+
+When the user invokes this command:
+<Step-by-step instructions for Conductor>
 ```
 
-## Hook Scripts
+Commands should:
+- Describe exact steps for Conductor to follow
+- Reference which agents to invoke
+- Specify what to output to the user
 
-Hooks live in `hooks/scripts/` and are registered in `hooks/hooks.json`.
-Exit codes: 0 = allow, 2 = block. Scripts receive tool input on stdin as JSON.
+---
 
-## Plugin Manifest
+## Hook conventions
 
-`plugin.json` uses directory references, not individual file lists:
+`hooks/hooks.json` registers two hook types:
 
-```json
-{
-  "agents": "agents/",
-  "skills": "skills/",
-  "commands": "commands/",
-  "hooks": "hooks/hooks.json"
-}
-```
+- **Write/Edit PreToolUse** (`pre-tool-use.sh`) — enforces plan lock and agent write restrictions
+- **Bash PreToolUse** (`phase-gate-hook.sh`) — enforces phase gate conditions on PAC CLI and verification commands
 
-This means adding a new `agents/newagent.agent.md` is automatically picked up
-on next install/reload — no manifest edit required.
+When adding new enforcement rules:
+- Plan lock and agent restrictions → `pre-tool-use.sh`
+- Phase advancement gates → `phase-gate-hook.sh`
 
-## Testing Changes
+Hooks exit with:
+- `0` = allow
+- `2` = block (Claude Code treats exit 2 as rejection)
 
-After modifying any agent, skill, command, or hook:
+---
 
-1. Load Relay locally: `claude --plugin-dir /path/to/relay`
-2. Run `/relay:start` with the Training Request pilot brief
-3. Verify the modified component works in the full workflow
-4. Check that hooks correctly enforce restrictions
+## Script conventions
+
+Python scripts in `scripts/` follow these conventions:
+
+- Exit `0` = success/pass
+- Exit `1` = failure/blocked
+- Always append to `.relay/execution-log.jsonl` after running
+- Always update `.relay/plan-index.json` with results
+- Accept `--env` or `--phase` arguments where applicable
+- Print clear human-readable output — Conductor shows this to the user
+
+---
+
+## plan-index.json
+
+The schema is defined in `schemas/plan-index.schema.json`. When adding new tracked fields:
+
+1. Update the schema first
+2. Update the relevant agent's output contract section
+3. Update `relay-gate-check.py` if the new field is gate-relevant
+4. Update `relay-consistency-check.py` if the new field can be cross-validated against docs
+
+---
+
+## What NOT to put in plugin files
+
+Plugin files (agents, skills, commands, CLAUDE.md, README.md) must never contain:
+
+- Real environment URLs (`org76e4780e.crm5.dynamics.com`)
+- Real solution names (`LeaveRequestSystem`)
+- Real component GUIDs
+- Real user emails or tenant IDs
+- Hardcoded table names from specific projects (`cr_leaverequest`)
+
+Use generic placeholders: `<your-org>`, `<SolutionName>`, `<table_logical_name>`, `<guid>`.
+
+Project-specific content belongs in the project's `.relay/` and `docs/` folders, not in the plugin.
+
+---
+
+## Version history
+
+| Version | Key changes |
+|---|---|
+| v0.1 | Initial 8 agents, 7 commands, 4 skills, hook enforcement |
+| v0.2.0 | Stylist + Analyst agents; load/audit/visualise/analyse/change/bugfix commands; Power Fx + design skills; command renaming |
+| v0.2.1 | Automation-first Forge; state coordination; 23-item footgun checklist |
+| v0.2.2 | 6 embedded workflow skills; removed Superpowers dependency |
+| v0.2.3 | All 4 Power Platform skills required; connection reuse pattern |
+| v0.2.4+0.2.5 | Project content cleaned; flow activation automated via clientdata PATCH |
+| v0.3.0 | plan-index.json contracts; gate validation; execution log; drift detection; Warden runtime tests; plan scoring |
+| v0.3.1 | Hook-enforced phase gates; consistency check; column-level drift; adversarial pilot guide |
