@@ -35,7 +35,7 @@ whether the plan was good.
 
 ```
 ❌ Wrong: "The Canvas App was built with 4 screens as planned. ✅"
-✅ Right: "Ran get_data_source_schema — confirmed cr_leaverequest connected.
+✅ Right: "Ran get_data_source_schema — confirmed <prefix>_<maintable> connected.
           Ran compile_canvas — Validation passed, 5 files compile clean.
           Synced to Power Apps Studio — scrHome, scrNewRequest, 
           scrMyRequests, scrLeaveBalance all visible in tree view. ✅"
@@ -49,7 +49,7 @@ whether the plan was good.
 pac dataverse table list --environment <url> --solution <name>
 
 # Verify specific columns
-pac dataverse column list --environment <url> --table cr_leaverequest
+pac dataverse column list --environment <url> --table <prefix>_<tablename>
 ```
 
 Cross-check against plan.md schema section:
@@ -108,8 +108,8 @@ pac env list-variables --environment <url>
 Read plan.md section by section. For each specified component:
 
 ```
-Plan says: "cr_leaverequest — 15 columns including cr_escalatedon (DateTime)"
-Evidence:  pac dataverse column list output shows cr_escalatedon, type DateTimeAttributeMetadata
+Plan says: "<prefix>_trainingrequest — 12 columns including <prefix>_requestdate (DateTime)"
+Evidence:  pac dataverse column list output shows <prefix>_requestdate, type DateTimeAttributeMetadata
 Result:    ✅ PASS
 ```
 
@@ -134,8 +134,8 @@ Verified: <date> | Environment: <org url>
 ## Schema
 | Component | Planned | Verified | Status |
 |---|---|---|---|
-| cr_leaverequest | 15 columns | 15 columns confirmed | ✅ PASS |
-| cr_leavetype | 5 columns | 5 columns confirmed | ✅ PASS |
+| <prefix>_trainingrequest | 12 columns | 12 columns confirmed | ✅ PASS |
+| <prefix>_trainingcatalog | 6 columns | 6 columns confirmed | ✅ PASS |
 
 ## Security
 | Component | Status | Evidence |

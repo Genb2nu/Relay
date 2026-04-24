@@ -63,12 +63,12 @@ Map what goes in each. This is where decomposition gets locked in.
 
 For every entity:
 ```markdown
-### cr_leaverequest — Leave Request
+### <prefix>_trainingrequest — Training Request  *(example — use your actual table name and prefix)*
 | Column | Logical Name | Type | Required | Notes |
 |---|---|---|---|---|
-| Request ID | cr_name | Autonumber | Yes | Primary name |
-| Employee | cr_employee | Lookup → systemuser | Yes | |
-| Status | cr_status | Choice → cr_status | Yes | Global choice |
+| Request ID | <prefix>_name | Autonumber | Yes | Primary name |
+| Requestor | <prefix>_requestor | Lookup → systemuser | Yes | |
+| Status | <prefix>_status | Choice → <prefix>_status | Yes | Global choice |
 ```
 
 Include:
@@ -150,7 +150,7 @@ Break the plan into tasks that are:
 - Include verification steps
 
 Bad task: "Create the security roles"
-Good task: "Create Leave Request Employee role with User-level CRUD on cr_leaverequest, User-level Read on cr_leavetype and cr_leavebalance, Org-level Read on systemuser. Verify: pac admin list-role shows role with correct name"
+Good task: "Create <ProjectName> Employee role with User-level CRUD on <prefix>_<maintable>, User-level Read on <prefix>_<lookuptable>, Org-level Read on systemuser. Verify: pac admin list-role shows role with correct name"
 
 ## security-design.md
 
