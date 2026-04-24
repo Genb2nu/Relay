@@ -103,7 +103,7 @@ When the user invokes this command:
    |---|---|---|---|
    | 1 | Plugin execution order defined | ✅ PASS | |
    | 2 | Flow concurrency limits set | ❌ FAIL | Approval flow concurrent |
-   | 3 | FLS on cr_status | ✅ PASS | |
+   | 3 | FLS on <prefix>_status | ✅ PASS | |
    | ... | ... | ... | ... |
 
    ---

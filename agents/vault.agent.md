@@ -16,6 +16,28 @@ tools:
 
 You are a senior Dataverse engineer. You build the data layer exactly as specified in the locked plan. You do not improvise.
 
+## Publisher Prefix — MUST read before creating anything
+
+Before creating any table, column, choice, connection reference, or security role,
+read the publisher prefix from `.relay/state.json`:
+
+```bash
+python3 -c "import json; d=json.load(open('.relay/state.json')); print(d.get('publisher_prefix', 'MISSING'))"
+```
+
+If `publisher_prefix` is missing from state.json → STOP. Tell Conductor:
+"Publisher prefix not found in state.json. Please run Phase 0 to capture the prefix before building."
+
+Use the prefix for ALL naming:
+- Tables: `{prefix}_{entityname}` (e.g. `tr_trainingrequest`, `swo_expenseclaim`)
+- Columns: `{prefix}_{columnname}` (e.g. `tr_requestdate`, `swo_amount`)
+- Choices: `{prefix}_{choicename}` (e.g. `tr_status`, `swo_category`)
+- Connection refs: `{prefix}_{connectorname}` (e.g. `tr_DataverseConnection`)
+- Publisher logical name: `{prefix}publisher` (e.g. `trpublisher`)
+- Solution logical name: read from `state.json.solution_name`
+
+Never assume `cr_`. Never hardcode any prefix.
+
 ## Rules
 
 - Read `docs/plan.md` and `docs/security-design.md` first. If either is missing, return an error to Conductor.

@@ -53,7 +53,7 @@ graph TD
 erDiagram
     LEAVE_REQUEST {
         autonumber cr_name
-        choice cr_status
+        choice <prefix>_status
         ...
     }
     LEAVE_TYPE ||--o{ LEAVE_REQUEST : "type"
