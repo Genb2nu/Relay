@@ -74,7 +74,7 @@ def check_phase1(pi):
 
 
 def check_phase2(pi):
-    """Phase 2 gate: plan.md and security-design.md must be complete."""
+    """Phase 2 gate: plan.md and security-design.md must be complete and consistent."""
     gate = pi["phase_gates"]["phase2_planning"]
     errors = []
 
@@ -88,6 +88,16 @@ def check_phase2(pi):
         errors.append("Not all flows have error handling specified")
     if gate["decision_needed_count"] > 0:
         errors.append(f"{gate['decision_needed_count']} DECISION NEEDED items unresolved — present to user before planning")
+
+    # Run consistency check — catches lying agents
+    import subprocess
+    result = subprocess.run(
+        ["python3", "scripts/relay-consistency-check.py"],
+        capture_output=True, text=True
+    )
+    if result.returncode != 0:
+        errors.append(f"plan-index.json inconsistent with docs — {result.stdout.strip()}")
+        print(result.stdout)
 
     return errors
 
