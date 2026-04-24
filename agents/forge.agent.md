@@ -137,6 +137,125 @@ After Vault has completed the schema:
 
 ---
 
+## Proactive Human-Action Checklists
+
+This is critical Forge behaviour. Before starting ANY component that requires human action first, STOP and print an explicit numbered checklist using the exact format below. Do NOT bury prerequisites in paragraphs. The user should never have to ask "what do I do next?" — the checklist IS the handoff.
+
+**Print the relevant checklist, then wait for the user to confirm before proceeding.**
+
+---
+
+### Checklist A — Canvas App (print BEFORE asking for URL)
+
+```
+⚠️ ACTION REQUIRED — Canvas App Setup (~5 min)
+Before I can build the Canvas App, please complete these steps:
+
+□ 1. make.powerapps.com → select [environment] environment
+□ 2. + Create → Blank app → Blank canvas app
+□ 3. Name: [app name from plan] | Format: [Tablet or Phone]
+□ 4. Settings → Updates → turn ON Coauthoring
+□ 5. Data icon (cylinder, left sidebar) → + Add data → add:
+     [list each data source from plan by display name]
+□ 6. Copy the full URL from your browser address bar
+□ 7. Reply here with: "Done — URL: [paste here]"
+
+✅ Once all steps done, paste the URL and I'll automate everything else.
+```
+
+---
+
+### Checklist B — Power Automate Flows (print AFTER import)
+
+```
+⚠️ ACTION REQUIRED — Flow Activation (~2 min per flow)
+Flows imported successfully but need two manual steps each:
+
+□ 1. make.powerautomate.com → Solutions → [solution] → Cloud flows
+□ 2. For each flow:
+     □ a. Click flow name → Connection References → connect each one
+          (sign in with your account when prompted)
+     □ b. Go back → select flow → Turn on
+
+Flows to activate:
+[list each flow name from plan]
+
+✅ Reply "Flows activated" when done.
+```
+
+---
+
+### Checklist C — New OAuth Connection (print when /list-connections finds none)
+
+```
+⚠️ ACTION REQUIRED — New Connection Needed (~2 min, one-time)
+No [connector name] connection exists in this environment yet.
+
+□ 1. make.powerapps.com → select environment → Connections
+□ 2. + New connection → search "[connector name]" → Create
+□ 3. Sign in when prompted → wait for status: Connected
+□ 4. Reply "Connection created"
+
+✅ After this, I'll reuse it automatically — no more OAuth prompts.
+```
+
+---
+
+### Checklist D — Business Rules (print when plan specifies rules)
+
+```
+⚠️ ACTION REQUIRED — Business Rules (~5 min each, no API available)
+
+[For each rule in the plan:]
+□ Rule: [Rule Name]
+   make.powerapps.com → Tables → [table] → Business rules → + New rule
+   Condition: [exact condition]
+   Action: [exact action]
+   Scope: [Entity / All Forms]
+   → Save → Activate
+
+✅ Reply "Business rules created" when all are active.
+```
+
+---
+
+### Checklist E — Security Role → User Assignment (when user list is known)
+
+```
+⚠️ ACTION REQUIRED — Assign Security Roles (~1 min per user)
+
+□ admin.powerplatform.microsoft.com
+□ Environments → [environment] → Settings → Users + permissions → Users
+□ For each person below, click name → Manage security roles → assign:
+
+[list: user email → role name]
+
+✅ Or run automatically: pac admin assign-user --user [email] --role "[role]" --environment [url]
+```
+
+---
+
+### Checklist F — Plugin Build + Registration (when C# plugin generated)
+
+```
+⚠️ ACTION REQUIRED — Plugin Deployment (~3 min)
+
+□ 1. Open terminal in: src/plugins/[PluginName]/
+□ 2. dotnet build --configuration Release
+□ 3. pac plugin push --plugin-file bin/Release/[PluginName].dll
+□ 4. Verify: Solutions → [solution] → Plug-in assemblies
+
+✅ Reply "Plugin deployed" when registered.
+```
+
+---
+
+### General rule
+
+If a checklist is needed and you skip it — that is a Forge defect. The user should never be stranded wondering what to do next.
+
+---
+
 ## Model-Driven App Pattern
 
 **DO NOT use /genpage for standard MDA configuration.** /genpage builds custom React/TypeScript coded pages — it does NOT configure sitemaps, forms, or views.
@@ -344,12 +463,68 @@ For each manual item, generate exact step-by-step instructions in the handoff. N
 
 ---
 
+## PowerShell Script Standards
+
+When generating PowerShell scripts, always follow these patterns to avoid parser errors:
+
+**Variable names followed by `:` must use `${}`:**
+```powershell
+# ❌ Wrong — parser error: "':' was not followed by a valid variable name"
+Write-Host "[ERROR] $RoleName: $message"
+
+# ✅ Correct — use ${} to delimit the variable
+Write-Host "[ERROR] ${RoleName}: $($_.ErrorDetails.Message)"
+```
+
+**Error detail extraction:**
+```powershell
+# ✅ Always use $($_.ErrorDetails.Message) not $_.Exception.Message for API errors
+catch { Write-Host "[ERROR] ${ComponentName}: $($_.ErrorDetails.Message)" -ForegroundColor Red }
+```
+
+**Step headers with $ in strings:**
+```powershell
+# ❌ Wrong
+Write-Host " STEP $Num: $Desc"
+# ✅ Correct
+Write-Host " STEP ${Num}: ${Desc}"
+```
+
 ## Code Standards
 
 - JavaScript: `"use strict"`, namespace under publisher prefix, correct form events
 - Power Fx: fully qualified column names, delegable predicates, `Employee.'Primary Email' = User().Email` pattern for current-user filters
 - Flows: Configure run after on all error paths, sequential concurrency where plan specifies it
 - Canvas Apps: honour design-system.md tokens exactly, named formulas for reuse
+
+## Canvas App YAML Quality Standards
+
+When generating Canvas App YAML:
+
+**AccessibleLabel on every control (Fix #14):**
+```yaml
+# Input controls — meaningful label
+- Control: TextInput
+  Properties:
+    AccessibleLabel: ="Training Title"
+
+# Decorative HtmlText containers — suppress warning with empty string
+- Control: HtmlViewer
+  Properties:
+    AccessibleLabel: =""
+```
+
+**Remove unused variables from App.OnStart:**
+- Review all `Set()` calls in `App.OnStart`
+- Remove any variables that are never referenced in screen formulas
+- Unused variables cause Performance warnings in App Checker
+
+**App Checker targets (all 5 categories must be 0 before handoff):**
+- Formulas: 0 errors
+- Runtime: 0 errors
+- Accessibility: 0 errors
+- Performance: 0 warnings
+- Data source: 0 errors
 
 ## Handling Errors
 
@@ -361,6 +536,26 @@ For each manual item, generate exact step-by-step instructions in the handoff. N
 ## Model Escalation
 
 Complex plugin chains, advanced PCF, intricate Power Fx → tell Conductor: "This task may benefit from Opus-level reasoning."
+
+## Security Role Assignment — PAC CLI First
+
+Always attempt `pac admin assign-user` before documenting as Admin Center manual:
+
+```powershell
+# Try automated first
+pac admin assign-user `
+    --user "user@domain.com" `
+    --role "<Role Name>" `
+    --environment "https://<org>.crm.dynamics.com"
+```
+
+Only fall back to Admin Center checklist if:
+- User email is unknown at build time
+- PAC CLI returns auth error for this operation
+
+If user emails are not provided in the brief, ask Conductor:
+"Security role assignment requires user emails. Please provide the test user emails
+or confirm to use the Admin Center checklist approach."
 
 ## Handoff
 

@@ -153,6 +153,8 @@ Watch the squad work.
 
 ## How It Works
 
+### Copilot VS Code (sequential — current default)
+
 ```
 YOU ──► Conductor
           │
@@ -162,22 +164,86 @@ YOU ──► Conductor
           │               .relay/plan-index.json (machine contract)
           │               docs/plan-scores.md (quality scores)
           │
-       Auditor + Warden ─► parallel review → loop until BOTH approve
+       Auditor ─┐        parallel review → loop until BOTH approve
+       Warden  ─┘
           │
        Critic ───────────► 23-item footgun checklist + adversarial pass
           │
        ▼ PLAN LOCKED (SHA256 + hook enforcement) ▼
           │
-       Vault + Stylist ──► schema + design system (parallel)
+       Vault  ─┐          schema + design system (parallel)
+       Stylist ─┘
           │
-       Forge ────────────► Canvas App (Canvas MCP) + MDA + flows + code apps
-          │               connection reuse via /list-connections
-          │               flow activation via Dataverse clientdata PATCH
+       Forge (Canvas App) ──► Canvas Authoring MCP
+       Forge (MDA)        ──► Dataverse API sitemap XML
+       Forge (Flows)      ──► PAC CLI import + clientdata PATCH activation
           │
-       Sentinel + Warden ► drift detection + security API tests
+       Sentinel ─┐         drift detection + security API tests (parallel)
+       Warden   ─┘
           │
        Conductor ────────► summary to YOU + export command
 ```
+
+> In Copilot VS Code, parallel steps run sequentially within one session. Output quality is identical — only speed differs.
+
+---
+
+### Copilot CLI with /fleet (true parallel — faster)
+
+`/fleet` is a Copilot CLI command that enables Copilot to simultaneously dispatch multiple subagents in parallel, each with its own context window. Relay uses `/fleet` at every phase where agents are independent:
+
+```
+Phase 3 — Plan Review
+/fleet
+  @auditor.agent  ──► reviews plan.md for completeness
+  @warden.agent   ──► reviews plan.md + security-design.md for security gaps
+  (both run simultaneously, both must approve before Phase 4)
+
+Phase 5a — Schema + Design (no dependency between them)
+/fleet
+  @vault.agent    ──► builds Dataverse schema, roles, FLS, env vars
+  @stylist.agent  ──► builds docs/design-system.md
+
+Phase 5b — Apps + Flows (all read schema, write to different targets)
+/fleet
+  @forge.agent    ──► Canvas App via Canvas Authoring MCP
+  @forge.agent    ──► MDA sitemap XML via Dataverse API
+  @forge.agent    ──► 6 flows JSON + pac solution import + activation
+
+Phase 5b — Inline verification (immediately after each build stream)
+/fleet
+  @sentinel.agent ──► Canvas App: App Checker all 5 categories
+  @sentinel.agent ──► MDA: sitemap, forms, views, publish status
+  @sentinel.agent ──► Flows: imported, active, connection refs linked
+
+Phase 6 — Final Verification
+/fleet
+  @sentinel.agent ──► functional verification + drift detection
+  @warden.agent   ──► execute security-tests.ps1 (FLS, role boundaries, self-approval)
+```
+
+> **Important:** Subagents do not inherit the orchestrator's chat history — the `/fleet` prompt must be self-contained. This is why Relay's locked `plan.md`, `state.json`, and skill files matter — subagents read those files for context instead of relying on conversation history.
+
+> **Cost note:** Each `/fleet` subagent consumes its own premium requests. Use `/fleet` when parallelism provides real time savings. For single-component builds, regular sequential mode is simpler and cheaper.
+
+> **Availability:** `/fleet` is exclusive to Copilot CLI. It is not available in VS Code Agent Mode.
+
+---
+
+### /relay:audit — parallel after analysis
+
+```
+Analyst ────────────► docs/existing-solution.md (must complete first)
+          │
+/fleet
+  @auditor.agent  ──► completeness + best practices
+  @warden.agent   ──► security gaps + FLS + role design
+  @critic.agent   ──► 23-item footgun checklist
+          │
+       Combined audit-report.md
+```
+
+---
 
 ### Gate enforcement (hard stops, not suggestions)
 
@@ -280,6 +346,34 @@ relay/
 ├── CLAUDE.md            # Conductor master instructions
 └── README.md
 ```
+
+---
+
+## Roadmap
+
+### v0.3.2 (next release)
+Fixes from the Training Request pilot:
+- Publisher prefix captured in Scout's first question — never defaults to `cr_`
+- `plan-index.json` created in `commands/start.md` as first action — can't be skipped
+- `state.json` phase updated by agents at each transition
+- Footgun #24 — Org-owned table privilege depth (Global only)
+- Vault checks table ownership before assigning privilege depth
+- Vault checks env var exists before creating (prevents duplicate error)
+- Forge sets `AccessibleLabel` on all Canvas App YAML controls
+- Sentinel verifies all 5 App Checker categories before Phase 6 sign-off
+- After `/compact`, Conductor re-reads ALM skill before invoking Forge
+- Forge flags MDA/flows as PARTIAL if not automated — Conductor retries
+- CLAUDE.md explicit rule: MDA sitemap + flows are always automated
+- `/fleet` prompts added to CLAUDE.md for Phase 3, 5a, 5b, 6
+- `/relay:audit`, `/relay:change`, `/relay:visualise` updated with `/fleet`
+- Phase 5b inline verification — Sentinel verifies each component immediately
+
+### v0.4 (parallel execution)
+- **Claude Code**: Full parallel Phase 3/5/6 using the `Task` tool — true isolated subagents with independent context windows, file access, and tool permissions. Each agent runs simultaneously, not sequentially.
+- **Copilot CLI**: Full `/fleet` integration — structured prompts for every parallel phase, dependency-aware DAG scheduling, `@agent-name` syntax for Relay specialists.
+- **VS Code**: Sequential-with-inline-verification as the fallback (already designed in v0.3.2).
+- **Cross-project memory**: `/relay:learn` command reads completed project execution logs and promotes repeated patterns into skill files automatically.
+- **Web dashboard**: Reads `.relay/execution-log.jsonl` and `plan-index.json` and renders project status visually — for stakeholders and team leads who don't want to read JSON.
 
 ---
 

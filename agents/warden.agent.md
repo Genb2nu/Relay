@@ -147,7 +147,7 @@ $h = @{ Authorization = "Bearer $EmployeeToken" }
 $r = Invoke-RestMethod -Uri "$OrgUrl/api/data/v9.2/<table_prefix>_leaverequests" -Headers $h
 Assert-Blocked $r "Employee cannot read all records via API"
 
-# Test 2: FLS blocks cr_status direct write by Employee
+# Test 2: FLS blocks <prefix>_<status_column> direct write by Employee
 try {
     Invoke-RestMethod -Method PATCH -Uri "$OrgUrl/api/data/v9.2/<table_prefix>_leaverequests($TestRecordId)" `
         -Headers $h -Body '{"<status_column>": 1}' -ContentType "application/json"

@@ -212,3 +212,5 @@ Project-specific content belongs in the project's `.relay/` and `docs/` folders,
 | v0.2.4+0.2.5 | Project content cleaned; flow activation automated via clientdata PATCH |
 | v0.3.0 | plan-index.json contracts; gate validation; execution log; drift detection; Warden runtime tests; plan scoring |
 | v0.3.1 | Hook-enforced phase gates; consistency check; column-level drift; adversarial pilot guide |
+| v0.3.2 | (planned) Publisher prefix in Scout; plan-index.json in start.md; /fleet prompts; Canvas App accessibility; Sentinel App Checker verification; post-compact ALM skill re-read |
+| v0.4 | (planned) Claude Code Task tool parallelism; Copilot CLI /fleet full integration; /relay:learn; web dashboard |

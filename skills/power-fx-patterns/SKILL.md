@@ -22,6 +22,10 @@ allowed_tools:
 
 # Power Fx Patterns
 
+> **Publisher prefix**: All examples below use `<prefix>_` as a placeholder.
+> Replace with the actual prefix from `.relay/state.json` (e.g. `cr`, `swo`, `con`).
+> Forge reads the prefix from state.json — never hardcode `cr_` in generated code.
+
 ## Current User — Filtering Dataverse Lookups
 
 ### Problem
@@ -86,7 +90,7 @@ Filter(
 ### Non-delegable operations (only process first 500/2000 records) ⚠️
 ```powerfx
 // Search() — non-delegable
-Search('Leave Requests', TextInput.Text, "cr_name")  // ⚠️
+Search('<Table>', TextInput.Text, "<prefix>_name")  // ⚠️
 
 // EndsWith() — non-delegable
 Filter('Leave Requests', EndsWith(RequestID, "2026"))  // ⚠️
@@ -196,7 +200,7 @@ If(
 ### Pattern for leave balance display
 ```powerfx
 // Remaining days — always recalculate, never store as static
-// cr_remaining = cr_entitled - cr_used - cr_pending
+// <prefix>_remaining = <prefix>_entitled - <prefix>_used - <prefix>_pending
 
 // In a gallery showing leave types and balances
 With(
@@ -204,7 +208,7 @@ With(
         balance: LookUp(
             'Leave Balances',
             Employee.'Primary Email' = User().Email &&
-            'Leave Type'.cr_name = ThisItem.cr_name &&
+            'Leave Type'.<prefix>_name = ThisItem.<prefix>_name &&
             Year = Year(Today())
         )
     },

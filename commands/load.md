@@ -82,6 +82,21 @@ When the user invokes this command:
 7. Update `.relay/state.json` to include `"context_loaded": true` so Conductor
    and Scout know to check `.relay/context-summary.md` before asking questions.
 
+## Vision / Image File Warning
+
+⚠️ If your organisation has **Vision disabled** in Copilot (a common IT policy),
+image files in the `context/` folder CANNOT be read:
+- `.png`, `.jpg`, `.jpeg`, `.gif`, `.bmp` → silently skipped
+- `.pdf`, `.md`, `.txt`, `.xlsx`, `.docx` → readable
+
+If your wireframes or mockups are images and Vision is disabled:
+- Convert them to PDF (File → Export as PDF in Figma, Miro, etc.)
+- Or describe the layout in a markdown file: `wireframe-description.md`
+- Or annotate a screenshot into a PDF with text descriptions
+
+To check if Vision is disabled: try attaching an image in Copilot Chat.
+If it says "Vision is disabled by your organization" — use PDF or markdown instead.
+
 ## Important notes
 
 - This command works whether or not a project has been started yet
