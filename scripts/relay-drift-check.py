@@ -53,15 +53,29 @@ def run_pac(args):
 
 
 def get_actual_tables(env_url, solution):
-    """Get tables actually deployed in the solution."""
+    """Get tables actually deployed in the solution with column counts."""
     stdout, code = run_pac(f"dataverse table list --environment {env_url} --solution {solution} --json")
     if code != 0:
-        return []
+        return {}
     try:
         data = json.loads(stdout)
-        return [t.get("LogicalName", "").lower() for t in data]
+        return {t.get("LogicalName", "").lower(): t for t in data}
     except:
-        return []
+        return {}
+
+
+def get_actual_column_count(env_url, table_name):
+    """Get the number of custom columns on a table (excludes system columns)."""
+    stdout, code = run_pac(f"dataverse column list --environment {env_url} --table {table_name} --json")
+    if code != 0:
+        return None
+    try:
+        data = json.loads(stdout)
+        # Count only custom columns (not system ones)
+        custom_cols = [c for c in data if not c.get("IsManaged", True) or c.get("IsCustomAttribute", False)]
+        return len(custom_cols)
+    except:
+        return None
 
 
 def get_actual_flows(env_url):
@@ -92,15 +106,42 @@ def drift_check(plan_index, env_url):
     solution = plan_index["project"].get("solution", "")
     components = plan_index["components"]
 
-    # --- Tables ---
-    planned_tables = [t["logical_name"].lower() for t in components.get("tables", []) if "logical_name" in t]
+    # --- Tables (existence + column count) ---
+    planned_tables = [t for t in components.get("tables", []) if "logical_name" in t]
     if planned_tables:
         actual_tables = get_actual_tables(env_url, solution)
         for table in planned_tables:
-            if actual_tables and table not in actual_tables:
-                drift_items.append({"type": "table", "name": table, "issue": "planned but not found in Dataverse"})
-            else:
-                passed_items.append({"type": "table", "name": table, "status": "found"})
+            table_name = table["logical_name"].lower()
+            planned_cols = table.get("columns", 0)
+
+            # Check 1: table exists
+            if actual_tables and table_name not in actual_tables:
+                drift_items.append({
+                    "type": "table",
+                    "name": table_name,
+                    "issue": "planned but not found in Dataverse"
+                })
+                continue
+
+            passed_items.append({"type": "table", "name": table_name, "status": "found"})
+
+            # Check 2: column count (if plan specifies one)
+            if planned_cols > 0:
+                actual_cols = get_actual_column_count(env_url, table_name)
+                if actual_cols is not None:
+                    # Allow ±1 tolerance for auto-created system columns
+                    if actual_cols < planned_cols - 1:
+                        drift_items.append({
+                            "type": "table_columns",
+                            "name": table_name,
+                            "issue": f"column count mismatch — planned: {planned_cols}, actual: {actual_cols} (missing {planned_cols - actual_cols} columns)"
+                        })
+                    else:
+                        passed_items.append({
+                            "type": "table_columns",
+                            "name": table_name,
+                            "status": f"columns ok ({actual_cols}/{planned_cols})"
+                        })
 
     # --- Flows ---
     planned_flows = [f["name"].lower() for f in components.get("flows", []) if "name" in f]
