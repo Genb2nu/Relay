@@ -136,3 +136,9 @@ review after completing the full checklist.
 - **What to check**: Were Power Automate flows generated as JSON and imported via solution, or incorrectly skipped as "not automatable"?
 - **Why it matters**: Flows ARE automatable via solution import. Only connection linking and flow activation are genuinely manual.
 - **Mark N/A if**: No flows in the solution.
+
+### 24. Publisher prefix consistent across all components
+- **What to check**: Does every custom table, column, choice, connection reference, and environment variable use the same prefix from `state.json`? Is there any `cr_` or other hardcoded prefix that doesn't match the project's publisher?
+- **Why it matters**: Mixed prefixes (some `cr_`, some `swo_`) create orphaned components, solution import failures, and confusion in the Dataverse schema.
+- **How to verify**: Search plan.md and the built solution for the publisher prefix. All custom logical names should start with `{prefix}_`.
+- **Mark N/A if**: Single-environment demo with no naming constraints.

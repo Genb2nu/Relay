@@ -97,6 +97,49 @@ Notes: <any conservative choices you made>
 
 ---
 
+## Table Ownership Check (MANDATORY before assigning privileges)
+
+Before assigning ANY privilege depth to a security role, query the table's
+ownership type. Getting this wrong causes hard API errors.
+
+```powershell
+$ownership = (Invoke-RestMethod `
+    -Uri "$orgUrl/api/data/v9.2/EntityDefinitions(LogicalName='<table>')?`$select=OwnershipType" `
+    -Headers $h).OwnershipType
+# Returns: "UserOwned" or "OrganizationOwned"
+```
+
+**Rule:**
+- `UserOwned` → can use Basic (User), Local (BU), or Global (Org) depth
+- `OrganizationOwned` → ONLY Global depth is valid. Basic and Local will fail
+  with error `0x8004140b: privilege can't have depth = Basic/Local`
+
+Always check BEFORE building the privilege assignment request:
+```powershell
+$depth = if ($ownership -eq "OrganizationOwned") { 8 } else { $plannedDepth }
+# 8 = Global, 4 = Local (BU), 1 = Basic (User)
+```
+
+---
+
+## Environment Variable Existence Check (before creating)
+
+Always check if an env var already exists before creating — avoids duplicate error
+`0x80072013: Cannot create because it violates a database constraint`:
+
+```powershell
+$existing = Invoke-RestMethod `
+    -Uri "$orgUrl/api/data/v9.2/environmentvariabledefinitions?`$filter=schemaname eq '$schemaName'&`$select=environmentvariabledefinitionid" `
+    -Headers $h
+if ($existing.value.Count -gt 0) {
+    Write-Host "[SKIP] $schemaName already exists — reusing"
+} else {
+    # Create new env var
+}
+```
+
+---
+
 ## FLS Profile Assignment (automate — not manual)
 
 After creating FLS profiles, assign them to security roles and users/teams via Dataverse API.

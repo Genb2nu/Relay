@@ -20,6 +20,9 @@ allowed_tools:
 
 # Power Platform ALM Patterns
 
+> **Publisher prefix**: All examples use `<prefix>_` as a placeholder.
+> Read the actual prefix from `.relay/state.json` before creating any component.
+
 ## Environment Strategy
 
 ### Standard Three-Tier
@@ -232,7 +235,7 @@ Flows can be fully automated by generating JSON definitions and importing them v
     },
     "connectionReferences": {
       "shared_commondataserviceforapps": {
-        "connectionName": "cr_DataverseConnection",
+        "connectionName": "<prefix>_DataverseConnection",
         "id": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
       }
     }
@@ -343,16 +346,16 @@ The PATCH must transform the clientdata structure to use connector names as keys
 ```
 GET clientdata structure (from Dataverse):
   connectionReferences:
-    cr_DataverseConnection:          ← CR logical name as key
-      connectionReferenceName: cr_DataverseConnection
+    <prefix>_DataverseConnection:    ← connection reference logical name as key
+      connectionReferenceName: <prefix>_DataverseConnection
       api.name: shared_commondataserviceforapps
 
 PATCH clientdata structure (what XRM expects):
   connectionReferences:
     shared_commondataserviceforapps:  ← connector name as key
-      connectionReferenceLogicalName: cr_DataverseConnection
+      connectionReferenceLogicalName: <prefix>_DataverseConnection
       api.name: shared_commondataserviceforapps
-      connection: { connectionReferenceLogicalName: cr_DataverseConnection }
+      connection: { connectionReferenceLogicalName: <prefix>_DataverseConnection }
   
   In each trigger/action host block:
     - REMOVE: connectionReferenceName
