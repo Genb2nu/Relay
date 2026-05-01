@@ -250,6 +250,38 @@ No [connector name] connection exists in this environment yet.
 
 ---
 
+### Checklist G — Playwright E2E Auth (before Sentinel runs Playwright tests)
+
+```
+⚠️ ACTION REQUIRED — Playwright Auth Setup (~3 min, one-time)
+
+□ 1. Copy tests/.env.example → tests/.env — fill in test user credentials
+□ 2. Run: npm run auth:headful
+     (a browser opens — sign in with your test user account)
+□ 3. Wait for storage state file to be saved (.playwright-ms-auth/)
+□ 4. If testing Model-Driven App: npm run auth:mda:headful
+□ 5. Reply "Auth complete"
+
+✅ Auth state is reusable — no repeat needed this session.
+```
+
+### Checklist H — Playwright MCP Setup (for AI-assisted test discovery)
+
+```
+⚠️ OPTIONAL — Playwright MCP for AI Test Generation
+
+□ 1. Run: npm install -g @playwright/mcp
+     Or: npx @playwright/mcp (no global install)
+□ 2. Add to .vscode/mcp.json:
+     { "playwright": { "command": "npx", "args": ["@playwright/mcp"] } }
+□ 3. Reload VS Code
+□ 4. Open the Canvas App or MDA in play mode in a browser
+□ 5. Sentinel will use the MCP to inspect controls and generate tests
+
+✅ This is optional — Sentinel can generate tests without MCP by deriving
+   control names from plan.md and .pa.yaml files.
+```
+
 ### General rule
 
 If a checklist is needed and you skip it — that is a Forge defect. The user should never be stranded wondering what to do next.

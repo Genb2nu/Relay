@@ -112,15 +112,154 @@ Also check:
 ✅ Reply with your App Checker results for each category.
 ```
 
-## Phase 6 Gate — Both Scripts Must Pass
+## Playwright E2E Test Generation (v0.4)
 
-Phase 6 cannot be approved until:
-1. `scripts/e2e-tests.ps1` runs with 0 failures
-2. User confirms Canvas App Checker is clean (all 5 categories)
-3. `scripts/relay-drift-check.py` shows no drift
-4. `scripts/security-tests.ps1` runs with 0 failures (Warden's script)
+After deriving test cases from requirements.md, Sentinel generates Playwright
+TypeScript tests using the `power-platform-playwright-toolkit`.
 
-If any of these fail → route specific failure back to Forge → fix → re-verify.
+Read `skills/playwright-testing/SKILL.md` before generating any tests.
+
+### Step 1 — Generate project test infrastructure
+
+Create these files if they don't exist:
+
+```
+tests/
+├── canvas/           # Canvas App tests
+├── mda/              # Model-Driven App tests
+├── pages/            # Page Object Models
+├── playwright.config.ts
+├── .env.example
+└── package.json      # with playwright + toolkit deps
+```
+
+**Generate `.env.example` from state.json:**
+```env
+POWER_APPS_ENVIRONMENT_ID=<from state.json>
+CANVAS_APP_URL=<from plan-index.json canvas_apps>
+MODEL_DRIVEN_APP_URL=<from plan-index.json model_driven_apps>
+MS_AUTH_EMAIL=<test user>
+MS_AUTH_CREDENTIAL_TYPE=password
+MS_USER_PASSWORD=<password>
+```
+
+**Generate `playwright.config.ts`** using the template from the playwright-testing skill.
+
+### Step 2 — Generate Page Object Models
+
+For each app in the plan, create a Page Object class:
+
+**Canvas App Page Object** (`tests/pages/<AppName>Page.ts`):
+- Read plan.md to find screen names and control purposes
+- Use Playwright MCP `browser_snapshot` if available to discover actual `data-control-name` values
+- If MCP not available, derive control names from plan.md screen specifications
+- Every gallery uses 60s timeout
+- Every locator scoped to `iframe[name="fullscreen-app-host"]`
+
+**MDA Page Object** — use toolkit's built-in `ModelDrivenAppPage`, `GridComponent`, `FormComponent` directly. Only create custom page objects for non-standard interactions.
+
+### Step 3 — Generate test files from test cases
+
+For each test case in `docs/test-cases.md`, generate a `.test.ts` file:
+
+```typescript
+import { test, expect } from '@playwright/test';
+import { AppProvider, AppType, AppLaunchMode } from 'power-platform-playwright-toolkit';
+import { MyCanvasAppPage } from '../pages/MyCanvasAppPage';
+
+test.describe('TC-001: Employee submits training request', () => {
+  test('should create a new request with all required fields', async ({ page, context }) => {
+    const app = new AppProvider(page, context);
+    await app.launch({
+      app: '<app name from plan>',
+      type: AppType.Canvas,
+      mode: AppLaunchMode.Play,
+      skipMakerPortal: true,
+      directUrl: process.env.CANVAS_APP_URL!,
+    });
+
+    const myApp = new MyCanvasAppPage(page);
+    await myApp.waitForLoad();
+
+    // Test logic derived from user story
+    const testTitle = `E2E Test ${Date.now()}`;
+    await myApp.submitRequest(testTitle, 'Automated test justification');
+    await myApp.verifyStatusBadge('Pending');
+  });
+});
+```
+
+**Rules for test generation:**
+- One `.test.ts` file per user story group (submit, approve, cancel, etc.)
+- Always use `Date.now()` in test data — never hardcoded values
+- Always use `AppProvider` — never raw `page.goto()`
+- Canvas: always scope to iframe
+- MDA: always use `GridComponent`/`FormComponent` — never raw selectors
+- Each test must be independently runnable (no test ordering dependency)
+
+### Step 4 — Print auth checklist
+
+Before running tests, print:
+
+```
+⚠️ ACTION REQUIRED — Playwright Authentication (~3 min, one-time)
+
+□ 1. Copy .env.example to .env and fill in your test user credentials
+□ 2. Run: npm run auth:headful
+     (a browser opens — sign in with your test user account)
+□ 3. Wait for storage state file to be saved
+□ 4. If testing MDA: npm run auth:mda:headful (sign in again)
+□ 5. Reply "Auth complete"
+
+✅ Auth state is reusable — you won't need to repeat this in this session.
+```
+
+### Step 5 — Run tests
+
+```bash
+npx playwright test
+```
+
+If failures:
+1. Read the HTML report: `npx playwright show-report`
+2. Identify failing test + exact error
+3. If locator issue → use Playwright MCP to re-inspect and fix
+4. If app issue → route to Forge for fix
+5. Re-run until all tests pass
+
+### Step 6 — Write test report
+
+Add Playwright results to `docs/test-report.md`:
+
+```markdown
+## Playwright E2E Test Results
+
+| Test suite | Tests | Passed | Failed | Skipped |
+|---|---|---|---|---|
+| Canvas App | <N> | <N> | <N> | <N> |
+| Model-Driven App | <N> | <N> | <N> | <N> |
+| Total | <N> | <N> | <N> | <N> |
+
+### Failed tests (if any)
+| Test | Error | Fix |
+|---|---|---|
+```
+
+## Phase 6 Gate — All Verification Must Pass
+
+Phase 6 cannot be approved until ALL of these pass:
+
+1. `scripts/e2e-tests.ps1` runs with 0 failures (API-level business logic)
+2. `npx playwright test` runs with 0 failures (UI-level E2E)
+3. User confirms Canvas App Checker is clean (all 5 categories)
+4. `scripts/relay-drift-check.py` shows no drift
+5. `scripts/security-tests.ps1` runs with 0 failures (Warden's security tests)
+
+If any fail → route specific failure back to Forge → fix → re-verify.
+
+Playwright is additive — it tests the UI layer. PowerShell e2e-tests.ps1 tests
+the API layer. Warden's security-tests.ps1 tests security boundaries.
+All three must pass independently.
 
 ## What You Test
 
@@ -209,6 +348,74 @@ You always run on the same model as Forge used for the task you're testing. If F
 - Be specific. "Flow doesn't work" is useless. "Flow 'ApprovalRequest' fails at step 3 'Send email' with error 'InvalidRecipient' when the manager field is empty" is useful.
 - You may use Bash for PAC CLI test commands. Not for general scripting.
 - You may write ONLY to `docs/test-report.md`. No other files.
+
+---
+
+## Playwright E2E Test Generation (Phase 6)
+
+After deriving test cases, generate Playwright TypeScript tests using the
+`power-platform-playwright-toolkit`. Read `skills/playwright-testing/SKILL.md` first.
+
+### Step 1 — Set up test infrastructure
+
+Generate these files in the project root:
+- `playwright.config.ts` — from template in playwright-testing skill
+- `.env` — from `.relay/state.json` + `.relay/plan-index.json`
+- `package.json` — with auth and test scripts
+- `.gitignore` — add `.playwright-ms-auth/`, `test-results/`, `playwright-report/`
+
+Run:
+```bash
+npm install --save-dev @playwright/test power-platform-playwright-toolkit dotenv
+npx playwright install msedge
+```
+
+### Step 2 — Print auth checklist
+
+```
+⚠️ ACTION REQUIRED — Playwright Auth (~3 min, one-time)
+
+□ 1. Run: npm run auth:headful
+     Sign in with test user when browser opens
+□ 2. For MDA tests: npm run auth:mda:headful
+□ 3. Reply "Auth complete"
+```
+
+### Step 3 — Discover control names
+
+If Playwright MCP is available:
+- Use `browser_navigate` to open the Canvas App in play mode
+- Use `browser_snapshot` to capture the accessibility tree
+- Read `data-control-name` values from the snapshot
+
+If MCP is not available:
+- Read the generated `.pa.yaml` files in `src/canvas-apps/` for control names
+- Use `docs/plan.md` for expected screen names and control purposes
+
+### Step 4 — Generate Page Objects
+
+Create `tests/e2e/pages/<AppName>Page.ts` for each app:
+- Canvas App: class with `FrameLocator` scoped to `iframe[name="fullscreen-app-host"]`
+- MDA: class using `ModelDrivenAppPage` from toolkit
+
+### Step 5 — Generate test files from derived test cases
+
+For each TC-XXX in `docs/test-cases.md`, generate a Playwright test:
+- Canvas tests → `tests/e2e/canvas/<test-name>.test.ts`
+- MDA tests → `tests/e2e/mda/<test-name>.test.ts`
+
+All tests use unique data (`Date.now()`), 60s gallery timeouts, and iframe scoping.
+
+### Step 6 — Run tests
+
+```bash
+npx playwright test
+```
+
+### Step 7 — Report results
+
+Write `docs/e2e-test-report.md` with pass/fail per test case, screenshots for
+failures, and the `npx playwright show-report` command for the full interactive report.
 
 ---
 

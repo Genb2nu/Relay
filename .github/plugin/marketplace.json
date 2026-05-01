@@ -1,19 +1,19 @@
 {
   "name": "relay-marketplace",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "owner": {
     "name": "Gen",
     "url": "https://github.com/Genb2nu"
   },
   "metadata": {
     "description": "Relay \u2014 Power Platform AI Squad. 8 specialist subagents, security-first workflow, dual Claude Code + GitHub Copilot CLI support.",
-    "version": "0.3.2"
+    "version": "0.4.0"
   },
   "plugins": [
     {
       "name": "relay",
       "description": "AI squad for Power Platform development \u2014 Scout, Drafter, Auditor, Warden, Critic, Vault, Forge, Sentinel",
-      "version": "0.3.2",
+      "version": "0.4.0",
       "source": "."
     }
   ]
