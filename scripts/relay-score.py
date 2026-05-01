@@ -15,6 +15,8 @@ Usage:
 import json
 import os
 import re
+import sys
+import tempfile
 from datetime import datetime, timezone
 
 PLAN_INDEX_PATH = ".relay/plan-index.json"
@@ -30,8 +32,26 @@ def log_event(agent, event, details=None):
     if details:
         entry.update(details)
     os.makedirs(".relay", exist_ok=True)
-    with open(LOG_PATH, "a") as f:
+    with open(LOG_PATH, "a", encoding="utf-8") as f:
         f.write(json.dumps(entry) + "\n")
+
+
+def atomic_write_text(path, content):
+    directory = os.path.dirname(path) or "."
+    os.makedirs(directory, exist_ok=True)
+    temp_path = None
+    try:
+        with tempfile.NamedTemporaryFile("w", delete=False, dir=directory, encoding="utf-8") as temp_file:
+            temp_file.write(content)
+            temp_path = temp_file.name
+        os.replace(temp_path, path)
+    finally:
+        if temp_path and os.path.exists(temp_path):
+            os.unlink(temp_path)
+
+
+def atomic_write_json(path, data):
+    atomic_write_text(path, json.dumps(data, indent=2))
 
 
 def read_file(path):
@@ -39,6 +59,18 @@ def read_file(path):
         return ""
     with open(path, encoding="utf-8", errors="replace") as f:
         return f.read()
+
+
+def load_plan_index():
+    try:
+        with open(PLAN_INDEX_PATH, encoding="utf-8") as handle:
+            return json.load(handle)
+    except json.JSONDecodeError as e:
+        print(f"Error: Invalid JSON in {PLAN_INDEX_PATH} at line {e.lineno}, column {e.colno}: {e.msg}")
+        sys.exit(1)
+    except OSError as e:
+        print(f"Error: Could not read {PLAN_INDEX_PATH}: {e}")
+        sys.exit(1)
 
 
 def score_completeness(plan_md, requirements_md, security_md):
@@ -143,8 +175,12 @@ def main():
     security_md = read_file(SECURITY_DESIGN_PATH)
 
     if not plan_md and not requirements_md:
-        print("No plan or requirements files found. Score deferred.")
-        return
+        print("Error: No plan or requirements files found. Score deferred.")
+        sys.exit(1)
+
+    if not os.path.exists(PLAN_INDEX_PATH):
+        print(f"Error: {PLAN_INDEX_PATH} not found. Cannot persist scores.")
+        sys.exit(1)
 
     c_score, c_gaps = score_completeness(plan_md, requirements_md, security_md)
     s_score, s_gaps = score_security(security_md, plan_md)
@@ -152,43 +188,39 @@ def main():
     overall = round((c_score * 0.4) + (s_score * 0.4) + (t_score * 0.2))
 
     # Update plan-index
-    if os.path.exists(PLAN_INDEX_PATH):
-        with open(PLAN_INDEX_PATH) as f:
-            pi = json.load(f)
-        pi["scores"] = {
-            "plan_completeness": c_score,
-            "security_coverage": s_score,
-            "testability": t_score,
-            "overall": overall,
-            "scored_at": datetime.now(timezone.utc).isoformat()
-        }
-        with open(PLAN_INDEX_PATH, "w") as f:
-            json.dump(pi, f, indent=2)
+    pi = load_plan_index()
+    pi["scores"] = {
+        "plan_completeness": c_score,
+        "security_coverage": s_score,
+        "testability": t_score,
+        "overall": overall,
+        "scored_at": datetime.now(timezone.utc).isoformat()
+    }
+    atomic_write_json(PLAN_INDEX_PATH, pi)
 
     # Write score report
-    os.makedirs("docs", exist_ok=True)
-    with open(SCORES_PATH, "w") as f:
-        f.write(f"# Plan Quality Scores\nGenerated: {datetime.now(timezone.utc).isoformat()}\n\n")
-        f.write(f"## Overall Score: {overall}/100\n\n")
-        f.write("| Dimension | Score | Weight |\n|---|---|---|\n")
-        f.write(f"| Plan Completeness | {c_score}/100 | 40% |\n")
-        f.write(f"| Security Coverage | {s_score}/100 | 40% |\n")
-        f.write(f"| Testability | {t_score}/100 | 20% |\n")
+    lines = [
+        f"# Plan Quality Scores\nGenerated: {datetime.now(timezone.utc).isoformat()}\n",
+        f"## Overall Score: {overall}/100\n",
+        "| Dimension | Score | Weight |\n|---|---|---|",
+        f"| Plan Completeness | {c_score}/100 | 40% |",
+        f"| Security Coverage | {s_score}/100 | 40% |",
+        f"| Testability | {t_score}/100 | 20% |",
+    ]
 
-        if c_gaps or s_gaps or t_gaps:
-            f.write("\n## Gaps Found\n\n")
-            if c_gaps:
-                f.write("### Completeness Gaps\n")
-                for g in c_gaps:
-                    f.write(f"- {g}\n")
-            if s_gaps:
-                f.write("\n### Security Gaps\n")
-                for g in s_gaps:
-                    f.write(f"- {g}\n")
-            if t_gaps:
-                f.write("\n### Testability Gaps\n")
-                for g in t_gaps:
-                    f.write(f"- {g}\n")
+    if c_gaps or s_gaps or t_gaps:
+        lines.append("\n## Gaps Found\n")
+        if c_gaps:
+            lines.append("### Completeness Gaps")
+            lines.extend(f"- {gap}" for gap in c_gaps)
+        if s_gaps:
+            lines.append("\n### Security Gaps")
+            lines.extend(f"- {gap}" for gap in s_gaps)
+        if t_gaps:
+            lines.append("\n### Testability Gaps")
+            lines.extend(f"- {gap}" for gap in t_gaps)
+
+    atomic_write_text(SCORES_PATH, "\n".join(lines) + "\n")
 
     print(f"\n📊 Plan Scores:")
     print(f"  Completeness: {c_score}/100")
@@ -209,4 +241,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        print(f"Error: {e}")
+        sys.exit(1)

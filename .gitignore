@@ -24,3 +24,6 @@ obj/
 # IDE
 .vscode/
 .idea/
+
+# Sandbox
+sandbox/

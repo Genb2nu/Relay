@@ -5,12 +5,13 @@ Validates plan-index.json before a phase can advance.
 Run by Conductor before invoking the next phase's agents.
 
 Usage:
+    python relay-gate-check.py --phase 0   # validate state.json scaffold before discovery
   python relay-gate-check.py --phase 1   # validate phase 1 requirements before phase 2
   python relay-gate-check.py --phase 2   # validate phase 2 requirements before phase 3
   python relay-gate-check.py --phase 3   # validate phase 3 requirements before phase 4
   python relay-gate-check.py --phase 4   # validate phase 4 requirements before phase 5
   python relay-gate-check.py --phase 5   # validate phase 5 requirements before phase 6
-  python relay-gate-check.py --phase 6   # validate phase 6 requirements before ship
+    python relay-gate-check.py --phase 6   # validate phase 6 requirements before completion
 
 Exit codes:
   0 = gate passed, safe to advance
@@ -21,18 +22,41 @@ import json
 import sys
 import os
 import argparse
+import tempfile
 from datetime import datetime, timezone
 
 PLAN_INDEX_PATH = ".relay/plan-index.json"
+STATE_PATH = ".relay/state.json"
+STATE_SCHEMA_PATH = "schemas/state.schema.json"
 LOG_PATH = ".relay/execution-log.jsonl"
 
 
-def load_plan_index():
-    if not os.path.exists(PLAN_INDEX_PATH):
-        print(f"ERROR: {PLAN_INDEX_PATH} not found. Has Conductor initialised this project?")
+def load_json_file(path, description):
+    if not os.path.exists(path):
+        print(f"ERROR: {path} not found. Has Conductor initialised this project?")
         sys.exit(1)
-    with open(PLAN_INDEX_PATH) as f:
-        return json.load(f)
+
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except json.JSONDecodeError as exc:
+        print(f"ERROR: Invalid {description} at {path}:{exc.lineno}:{exc.colno}: {exc.msg}")
+        sys.exit(1)
+    except OSError as exc:
+        print(f"ERROR: Could not read {description} at {path}: {exc}")
+        sys.exit(1)
+
+
+def load_plan_index():
+    return load_json_file(PLAN_INDEX_PATH, "plan-index.json")
+
+
+def load_state():
+    return load_json_file(STATE_PATH, "state.json")
+
+
+def load_state_schema():
+    return load_json_file(STATE_SCHEMA_PATH, "state schema")
 
 
 def log_event(agent, event, phase, details=None):
@@ -45,13 +69,88 @@ def log_event(agent, event, phase, details=None):
     if details:
         entry.update(details)
     os.makedirs(".relay", exist_ok=True)
-    with open(LOG_PATH, "a") as f:
+    with open(LOG_PATH, "a", encoding="utf-8") as f:
         f.write(json.dumps(entry) + "\n")
 
 
+def atomic_write_json(path, data):
+    directory = os.path.dirname(path) or "."
+    os.makedirs(directory, exist_ok=True)
+    temp_path = None
+    try:
+        with tempfile.NamedTemporaryFile("w", delete=False, dir=directory, encoding="utf-8") as temp_file:
+            json.dump(data, temp_file, indent=2)
+            temp_path = temp_file.name
+        os.replace(temp_path, path)
+    finally:
+        if temp_path and os.path.exists(temp_path):
+            os.unlink(temp_path)
+
+
 def save_plan_index(data):
-    with open(PLAN_INDEX_PATH, "w") as f:
-        json.dump(data, f, indent=2)
+    atomic_write_json(PLAN_INDEX_PATH, data)
+
+
+def _matches_type(value, expected_type):
+    if expected_type == "object":
+        return isinstance(value, dict)
+    if expected_type == "string":
+        return isinstance(value, str)
+    if expected_type == "boolean":
+        return isinstance(value, bool)
+    if expected_type == "null":
+        return value is None
+    return True
+
+
+def _format_expected_types(expected_types):
+    if isinstance(expected_types, list):
+        return " or ".join(expected_types)
+    return str(expected_types)
+
+
+def validate_schema(data, schema, path="$"):
+    errors = []
+
+    expected_types = schema.get("type")
+    if expected_types is not None:
+        allowed_types = expected_types if isinstance(expected_types, list) else [expected_types]
+        if not any(_matches_type(data, expected_type) for expected_type in allowed_types):
+            actual_type = type(data).__name__
+            errors.append(f"{path}: expected {_format_expected_types(expected_types)}, found {actual_type}")
+            return errors
+
+    if "enum" in schema and data not in schema["enum"]:
+        errors.append(f"{path}: expected one of {schema['enum']}, found {data!r}")
+
+    if isinstance(data, dict):
+        properties = schema.get("properties", {})
+        required = schema.get("required", [])
+
+        for field_name in required:
+            if field_name not in data:
+                errors.append(f"{path}.{field_name}: missing required field")
+
+        for field_name, field_value in data.items():
+            field_path = f"{path}.{field_name}"
+            if field_name in properties:
+                errors.extend(validate_schema(field_value, properties[field_name], field_path))
+                continue
+
+            additional = schema.get("additionalProperties", True)
+            if additional is False:
+                errors.append(f"{field_path}: unexpected field")
+            elif isinstance(additional, dict):
+                errors.extend(validate_schema(field_value, additional, field_path))
+
+    return errors
+
+
+def check_phase0():
+    """Phase 0 gate: state.json must match the scaffold schema."""
+    state = load_state()
+    schema = load_state_schema()
+    return validate_schema(state, schema)
 
 
 def check_phase1(pi):
@@ -92,7 +191,7 @@ def check_phase2(pi):
     # Run consistency check — catches lying agents
     import subprocess
     result = subprocess.run(
-        ["python3", "scripts/relay-consistency-check.py"],
+        [sys.executable, "scripts/relay-consistency-check.py"],
         capture_output=True, text=True
     )
     if result.returncode != 0:
@@ -169,12 +268,13 @@ def check_phase5(pi):
         else:
             for ff in flow_files:
                 try:
-                    with open(ff) as fh:
+                    with open(ff, encoding="utf-8") as fh:
                         flow_data = json.load(fh)
                     if "triggers" not in flow_data and "properties" in flow_data:
                         errors.append(f"{ff} appears ARM-shaped (has 'properties' but no 'triggers') — must be Dataverse clientData format")
-                except (json.JSONDecodeError, IOError):
-                    pass
+                except Exception as e:
+                    print(f"Error: {e}")
+                    errors.append(f"{ff} could not be parsed: {e}")
 
     # Check for essential scripts
     essential_scripts = []
@@ -191,8 +291,7 @@ def check_phase5(pi):
     if components.get("canvas_apps"):
         state_path = ".relay/state.json"
         if os.path.exists(state_path):
-            with open(state_path) as sf:
-                state = json.load(sf)
+            state = load_json_file(state_path, "state.json")
             if not state.get("canvas_app_bootstrapped"):
                 errors.append("Canvas App in plan but state.json.canvas_app_bootstrapped is not true")
 
@@ -225,6 +324,7 @@ def check_phase6(pi):
 
 
 GATE_CHECKS = {
+    0: check_phase0,
     1: check_phase1,
     2: check_phase2,
     3: check_phase3,
@@ -245,11 +345,10 @@ GATE_NAMES = {
 
 def main():
     parser = argparse.ArgumentParser(description="Relay phase gate validator")
-    parser.add_argument("--phase", type=int, required=True, choices=[1,2,3,4,5,6],
-                        help="Phase number to validate (checks completion of this phase)")
+    parser.add_argument("--phase", type=int, required=True, choices=[0,1,2,3,4,5,6],
+                        help="Phase number to validate (0 validates state scaffold; 1-6 validate completion of that phase)")
     args = parser.parse_args()
 
-    pi = load_plan_index()
     phase = args.phase
     check_fn = GATE_CHECKS.get(phase)
 
@@ -257,6 +356,20 @@ def main():
         print(f"No gate check for phase {phase}")
         sys.exit(0)
 
+    if phase == 0:
+        errors = check_fn()
+        if errors:
+            print("\n🔴 GATE FAILED — Phase 0 scaffold is invalid. Cannot proceed to discovery.")
+            for e in errors:
+                print(f"  ✗ {e}")
+            log_event("conductor", "gate_failed", phase, {"errors": errors})
+            sys.exit(1)
+
+        print("\n✅ GATE PASSED — Phase 0 scaffold is valid. Safe to begin discovery.")
+        log_event("conductor", "gate_passed", phase)
+        sys.exit(0)
+
+    pi = load_plan_index()
     errors = check_fn(pi)
 
     if errors:
@@ -282,4 +395,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        print(f"Error: {e}")
+        sys.exit(1)

@@ -4,7 +4,7 @@ A plugin-native SDLC orchestration system for Microsoft Power Platform. Ten spec
 
 Works on **Claude Code**, **GitHub Copilot CLI**, and **Copilot in VS Code**.
 
-> **v0.5.1** — Smoke test fixes · Flow build guide · PS 5.1 strict compat · FLS SP membership · Idempotent roles · AddSolutionComponent constants
+> **v0.5.2** — Security hardening · state schema validation · hook regression harness · prerequisite alignment
 
 ---
 
@@ -25,7 +25,7 @@ You describe what you want to build. Relay runs a squad of specialists through a
 | Developer | **Forge** | Canvas Apps, MDA, Power Automate flows, code apps |
 | Tester | **Sentinel** | Functional verification + drift detection (plan vs actual build) |
 
-**Workflow:** discover → plan → review → critique → build → verify → ship
+**Workflow:** discovery → planning → review → adversarial → build → verify → complete
 
 Every phase transition is gate-validated. The plan locks with SHA256 checksums after three independent reviewers approve. Security is tested at runtime, not just reviewed on paper.
 
@@ -38,6 +38,9 @@ Every phase transition is gate-validated. The plan locks with SHA256 checksums a
 - Power Platform CLI (`pac`)
 - Azure CLI (`az`)
 - Python 3.8+ (for gate validation, drift detection, and scoring scripts)
+- `bash` (required by hooks; on Windows use Git Bash or WSL)
+- `jq` (required by hooks; on Windows: `winget install jqlang.jq`)
+- PowerShell 7+ / `pwsh` (required by Relay scripts)
 
 ### Required: Microsoft Power Platform Skills
 
@@ -58,7 +61,7 @@ Every phase transition is gate-validated. The plan locks with SHA256 checksums a
 
 > **No Superpowers needed.** All orchestration, discovery, planning, verification, and debugging skills are embedded in Relay.
 
-> **Prerequisite check:** Run `python scripts/relay-prerequisite-check.py` before starting a project. This validates all CLI tools, auth, MCP servers, plugins, and skills are properly configured. Use `--fix` to attempt auto-remediation of missing components.
+> **Prerequisite check:** Run `python scripts/relay-prerequisite-check.py` before starting a project. This validates all CLI tools, including `bash`, `jq`, and `pwsh`, plus auth, MCP servers, plugins, and skills. Use `--fix` to attempt auto-remediation of missing components.
 
 ### Required: Dataverse MCP
 
@@ -111,11 +114,13 @@ claude --plugin-dir /path/to/Relay      # Claude Code
 copilot --plugin-dir /path/to/Relay     # Copilot CLI
 ```
 
+Run `tests/test-hooks.sh` to verify hook enforcement.
+
 ### After installing
 ```
 /relay:doctor
 ```
-Verifies all prerequisites: PAC CLI, Azure CLI, Python, Node.js, Git, Power Platform Skills plugins, Dataverse MCP, and shows your active PAC auth profile. Fix any ❌ items before starting a project.
+Verifies all prerequisites: PAC CLI, Azure CLI, Python, Node.js, Git, Bash, jq, PowerShell 7+, Power Platform Skills plugins, Dataverse MCP, and shows your active PAC auth profile. Fix any ❌ items before starting a project.
 
 ---
 
@@ -425,7 +430,16 @@ Fixes from the Training Request pilot:
 - Canvas App design reading skill + enterprise layout as named reference pattern
 - All v0.3.2 pilot fixes included
 
-### v0.5.1 (current)
+### v0.5.2 (current)
+- **Deny-by-default write hook** — `CLAUDE_AGENT` must be explicit and known before writes are allowed
+- **Full-path enforcement** — hook restrictions now compare canonical workspace paths, not basenames
+- **Stylist + Analyst enforcement** — both agents now have explicit write restrictions in `pre-tool-use.sh`
+- **Expanded Bash phase gate** — `pac solution import`, `pac plugin push`, `dotnet build`, `activate-flows.ps1`, and all `pac solution export` variants are gated
+- **Phase 0 schema validation** — `state.json` is validated against `schemas/state.schema.json` before discovery starts
+- **Hook regression harness** — `tests/test-hooks.sh` verifies deny-by-default and phase-gate behavior
+- **Prerequisite alignment** — docs and prerequisite checks now cover `bash`, `jq`, and `pwsh`
+
+### v0.5.1
 - **CLI context overflow fix** — Hard Rule #9: 400-line chunk limit for all agents
 - **Template independence** — Drafter, Sentinel, Warden embed output structures (no template file lookups)
 - **Flow build guide** — Forge produces markdown build guide instead of JSON (solution-layer JSON deferred to v0.5.2)
@@ -437,7 +451,7 @@ Fixes from the Training Request pilot:
 - **Scout batch questions** — CLI mode batches gap questions instead of interactive one-at-a-time
 - **Phase 5 pre-flight** — Auth validation + directory pre-creation before any build agent
 - **Hung subagent protocol** — 30-min timeout + re-launch pattern in orchestration skill
-- **load+start merge** — `/relay:start` accepts `phase=context_loaded` from `/relay:load`
+- **load+start merge** — `/relay:start` accepts `context_loaded=true` from `/relay:load` while keeping `phase=discovery`
 - **MDA sitemap pattern** — Solution export→modify→reimport documented with script generation
 - **AddSolutionComponent constants** — ComponentType code table added to ALM skill
 - **`/relay:doctor`** — Pre-flight environment check: tools, plugins, MCP, auth profiles

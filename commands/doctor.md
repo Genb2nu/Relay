@@ -44,9 +44,17 @@ Even if the script passes, confirm these minimum versions explicitly:
 | python | 3.8+ | `python --version` |
 | node | 22+ | `node --version` |
 | git | any | `git --version` |
+| bash | any | `bash --version` |
+| jq | any | `jq --version` |
+| pwsh | 7.0+ | `pwsh --version` |
 | dotnet | 6.0+ | `dotnet --version` |
 
 For each tool, show: ✅ `tool vX.Y.Z` or ❌ `tool — not found (install: <hint>)`
+
+Install hints for the new hard requirements:
+- `bash`: Git Bash or WSL on Windows
+- `jq`: `winget install jqlang.jq`
+- `pwsh`: install PowerShell 7+
 
 ## Step 3 — Check Power Platform Skills plugins
 
@@ -135,6 +143,9 @@ Print a summary table:
 │ Python 3.8+                     │ ✅/❌  │
 │ Node.js 22+                     │ ✅/❌  │
 │ Git                             │ ✅/❌  │
+│ Bash                            │ ✅/❌  │
+│ jq                              │ ✅/❌  │
+│ PowerShell 7+                   │ ✅/❌  │
 │ .NET SDK 6.0+                   │ ✅/❌  │
 │ Power Platform Skills plugins   │ ✅/⚠️  │
 │ Dataverse MCP                   │ ✅/⚠️  │

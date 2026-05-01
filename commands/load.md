@@ -81,6 +81,8 @@ When the user invokes this command:
 
 7. Update `.relay/state.json` to include `"context_loaded": true` so Conductor
    and Scout know to check `.relay/context-summary.md` before asking questions.
+   Keep `phase` canonical: if the project has not started yet, initialise it as
+   `"discovery"` rather than inventing a separate `context_loaded` phase.
 
 ## Vision / Image File Warning
 

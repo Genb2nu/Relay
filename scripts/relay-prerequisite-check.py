@@ -4,7 +4,7 @@ relay-prerequisite-check.py
 Phase 0 prerequisite validation — runs before /relay:start allows Phase 1.
 
 Checks:
-  1. CLI tools: pac, az, dotnet, python, git, node
+    1. CLI tools: pac, az, dotnet, python, git, node, bash, jq, pwsh
   2. PAC auth: at least one active profile
   3. Azure CLI: logged in (az account show)
   4. Relay skills: all skills/*/SKILL.md present
@@ -15,7 +15,6 @@ Checks:
 Exit codes:
   0 = all prerequisites met
   1 = one or more prerequisites missing (prints remediation steps)
-  2 = could not determine (partial check — e.g. not in CLI context)
 
 Usage:
   python scripts/relay-prerequisite-check.py
@@ -80,6 +79,28 @@ REQUIRED_CLI_TOOLS = {
         "install_hint": "https://nodejs.org/",
         "critical": False,
         "win_fallback_globs": [],
+    },
+    "bash": {
+        "min_version": None,
+        "install_hint": "Install Git Bash or enable WSL on Windows",
+        "critical": True,
+        "win_fallback_globs": [
+            os.path.join(os.environ.get("PROGRAMFILES", ""), "Git", "bin", "bash.exe"),
+        ],
+    },
+    "jq": {
+        "min_version": None,
+        "install_hint": "winget install jqlang.jq",
+        "critical": True,
+        "win_fallback_globs": [],
+    },
+    "pwsh": {
+        "min_version": "7.0",
+        "install_hint": "https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-windows",
+        "critical": True,
+        "win_fallback_globs": [
+            os.path.join(os.environ.get("PROGRAMFILES", ""), "PowerShell", "**", "pwsh.exe"),
+        ],
     },
 }
 
@@ -162,6 +183,16 @@ def log_event(event, details=None):
     if os.path.isdir(log_dir):
         with open(LOG_PATH, "a", encoding="utf-8") as f:
             f.write(json.dumps(entry) + "\n")
+
+
+def load_json_file(path, description):
+    try:
+        with open(path, encoding="utf-8") as handle:
+            return json.load(handle)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Invalid JSON in {description} at line {e.lineno}, column {e.colno}: {e.msg}") from e
+    except OSError as e:
+        raise ValueError(f"Could not read {description}: {e}") from e
 
 
 # ---------------------------------------------------------------------------
@@ -493,8 +524,7 @@ def check_mcp_servers(skip=False):
 
     if mcp_json_path.is_file():
         try:
-            with open(mcp_json_path, encoding="utf-8") as f:
-                mcp_config = json.load(f)
+            mcp_config = load_json_file(mcp_json_path, str(mcp_json_path))
             servers = mcp_config.get("servers", {})
             # Look for a Dataverse server (any key with crm*.dynamics.com or /api/mcp in URL)
             dv_servers = []
@@ -522,7 +552,7 @@ def check_mcp_servers(skip=False):
                     ),
                     "critical": False,
                 })
-        except (json.JSONDecodeError, OSError) as e:
+        except ValueError as e:
             results.append({
                 "check": "mcp:vscode",
                 "status": "WARN",
@@ -545,8 +575,7 @@ def check_mcp_servers(skip=False):
     cli_mcp_path = Path.home() / ".copilot" / "mcp-config.json"
     if cli_mcp_path.is_file():
         try:
-            with open(cli_mcp_path, encoding="utf-8") as f:
-                cli_config = json.load(f)
+            cli_config = load_json_file(cli_mcp_path, str(cli_mcp_path))
             servers = cli_config.get("servers", cli_config.get("mcpServers", {}))
             dv_cli = []
             for name, cfg in servers.items():
@@ -569,7 +598,7 @@ def check_mcp_servers(skip=False):
                     "remediation": "Run: copilot mcp add --transport http dataverse https://<org>.crm.dynamics.com/api/mcp",
                     "critical": False,
                 })
-        except (json.JSONDecodeError, OSError) as e:
+        except ValueError as e:
             results.append({
                 "check": "mcp:cli",
                 "status": "WARN",
@@ -770,4 +799,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        print(f"Error: {e}")
+        sys.exit(1)

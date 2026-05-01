@@ -4,9 +4,10 @@
 # and runs relay-gate-check.py to validate current gate before proceeding.
 #
 # Phase advancement indicators:
-#   Phase 4→5 (build start): pac solution create, pac dataverse table, pac auth select
+#   Phase 4→5 (build start): pac solution create/import, pac dataverse table/column,
+#                             pac plugin push, activate-flows.ps1, dotnet build
 #   Phase 5→6 (verify start): pac solution check, sentinel test commands
-#   Phase 6→7 (ship):         pac solution export --managed
+#   Phase 6→7 (complete):     pac solution export (all variants)
 #
 # Exit codes:
 #   0 = allow
@@ -33,7 +34,7 @@ log_event() {
 }
 
 # --- Gate: Phase 4 must be complete before build commands run ---
-BUILD_PATTERNS="pac solution create|pac dataverse table|pac dataverse column|pac admin list-role"
+BUILD_PATTERNS="pac solution create([[:space:]]|$)|pac solution import([[:space:]]|$)|pac dataverse table([[:space:]]|$)|pac dataverse column([[:space:]]|$)|pac admin list-role([[:space:]]|$)|pac plugin push([[:space:]]|$)|activate-flows\.ps1|dotnet build([[:space:]]|$)"
 if echo "$COMMAND" | grep -qE "$BUILD_PATTERNS"; then
   if [ -f "$PLAN_INDEX" ]; then
     PLAN_LOCKED=$(jq -r '.phase_gates.phase4_adversarial.plan_locked // false' "$PLAN_INDEX" 2>/dev/null)
@@ -69,8 +70,8 @@ if echo "$COMMAND" | grep -qE "$VERIFY_PATTERNS"; then
   fi
 fi
 
-# --- Gate: Phase 6 must be complete before managed solution export ---
-if echo "$COMMAND" | grep -qE "pac solution export.*--managed|pac solution export.*-m "; then
+# --- Gate: Phase 6 must be complete before any solution export ---
+if echo "$COMMAND" | grep -qE "pac solution export([[:space:]]|$)"; then
   if [ -f "$PLAN_INDEX" ]; then
     PHASE6_PASSED=$(jq -r '.phase_gates.phase6_verify.passed // false' "$PLAN_INDEX" 2>/dev/null)
     SENTINEL=$(jq -r '.phase_gates.phase6_verify.sentinel_approved // false' "$PLAN_INDEX" 2>/dev/null)
@@ -80,7 +81,7 @@ if echo "$COMMAND" | grep -qE "pac solution export.*--managed|pac solution expor
       echo "" >&2
       echo "🔴 GATE BLOCKED: Cannot export managed solution until Phase 6 verification passes." >&2
       echo "   Sentinel approved: $SENTINEL | Warden approved: $WARDEN" >&2
-      echo "   Both Sentinel and Warden must pass before the solution can ship." >&2
+      echo "   Both Sentinel and Warden must pass before the solution can be exported and the workflow can complete." >&2
       log_event "gate_blocked" "export attempted before phase 6 complete"
       exit 2
     fi

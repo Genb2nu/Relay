@@ -34,21 +34,38 @@ def log_event(event, details=None):
     if details:
         entry.update(details)
     os.makedirs(".relay", exist_ok=True)
-    with open(LOG_PATH, "a") as f:
+    with open(LOG_PATH, "a", encoding="utf-8") as f:
         f.write(json.dumps(entry) + "\n")
 
 
-def read(path):
+def read_text(path):
     if not os.path.exists(path):
         return ""
-    return open(path, encoding="utf-8", errors="replace").read().lower()
+    try:
+        with open(path, encoding="utf-8", errors="replace") as handle:
+            return handle.read().lower()
+    except OSError as e:
+        print(f"Error: Could not read {path}: {e}")
+        return ""
+
+
+def load_plan_index():
+    try:
+        with open(PLAN_INDEX_PATH, encoding="utf-8") as handle:
+            return json.load(handle)
+    except json.JSONDecodeError as e:
+        print(f"Error: Invalid JSON in {PLAN_INDEX_PATH} at line {e.lineno}, column {e.colno}: {e.msg}")
+        sys.exit(1)
+    except OSError as e:
+        print(f"Error: Could not read {PLAN_INDEX_PATH}: {e}")
+        sys.exit(1)
 
 
 def check_consistency(pi):
     issues = []
-    plan = read(PLAN_PATH)
-    security = read(SECURITY_PATH)
-    requirements = read(REQUIREMENTS_PATH)
+    plan = read_text(PLAN_PATH)
+    security = read_text(SECURITY_PATH)
+    requirements = read_text(REQUIREMENTS_PATH)
     phase2 = pi.get("phase_gates", {}).get("phase2_planning", {})
     components = pi.get("components", {})
 
@@ -83,7 +100,7 @@ def check_consistency(pi):
                         # Simple check: table section in plan should have column rows
                         # Look for the table name followed by column-like content
                         pattern = rf"{re.escape(table_name)}.*?\|"
-                        if not re.search(pattern, open(PLAN_PATH).read().lower() if os.path.exists(PLAN_PATH) else "", re.DOTALL):
+                        if not re.search(pattern, plan, re.DOTALL):
                             issues.append({
                                 "claim": f"all_entities_have_columns: true (columns: {planned_cols})",
                                 "check": "plan.md",
@@ -131,7 +148,7 @@ def check_consistency(pi):
     planned_tables = components.get("tables", [])
     planned_flows = components.get("flows", [])
     if planned_tables:
-        plan_text = open(PLAN_PATH).read() if os.path.exists(PLAN_PATH) else ""
+        plan_text = plan
         for table in planned_tables:
             name = table.get("logical_name", "")
             if name and name not in plan_text.lower():
@@ -149,8 +166,7 @@ def main():
         print("No plan-index.json found — consistency check skipped")
         sys.exit(0)
 
-    with open(PLAN_INDEX_PATH) as f:
-        pi = json.load(f)
+    pi = load_plan_index()
 
     issues = check_consistency(pi)
 
@@ -169,4 +185,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        print(f"Error: {e}")
+        sys.exit(1)

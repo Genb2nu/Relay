@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://relay.dev/schemas/state.schema.json",
+  "title": "Relay state.json",
+  "description": "Phase 0 scaffold contract for Relay projects.",
+  "type": "object",
+  "required": [
+    "project_name",
+    "publisher_prefix",
+    "environment_url",
+    "solution_name",
+    "phase",
+    "mode",
+    "plan_checksum",
+    "security_design_checksum",
+    "approvals",
+    "components"
+  ],
+  "properties": {
+    "project_name": { "type": "string" },
+    "publisher_prefix": { "type": "string" },
+    "environment_url": { "type": "string" },
+    "solution_name": { "type": "string" },
+    "phase": {
+      "type": "string",
+      "enum": ["discovery", "planning", "review", "adversarial", "build", "verify", "complete"]
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["greenfield", "change", "bugfix"]
+    },
+    "plan_checksum": { "type": ["string", "null"] },
+    "security_design_checksum": { "type": ["string", "null"] },
+    "context_loaded": { "type": "boolean" },
+    "canvas_app_bootstrapped": { "type": "boolean" },
+    "approvals": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "components": {
+      "type": "object",
+      "required": [
+        "app_modules",
+        "security_roles",
+        "fls_profiles",
+        "connection_references"
+      ],
+      "properties": {
+        "app_modules": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "security_roles": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "fls_profiles": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "connection_references": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

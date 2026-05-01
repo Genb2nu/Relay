@@ -216,3 +216,4 @@ Project-specific content belongs in the project's `.relay/` and `docs/` folders,
 | v0.4.0 | Playwright E2E testing; /fleet parallel execution prompts; Phase 5 inline verification; Sentinel test derivation from requirements; Canvas App design reading skill |
 | v0.5.0 | Stylist v2; Canvas pipeline 3a-3i; 5 new skills; PS 5.1 enforcement; Gate content checks; Output contracts |
 | v0.5.1 | CLI context overflow fix; template independence; flow build guide; Canvas MCP-only; Vault PS 5.1 strict compat; idempotent roles; FLS SP membership; AddSolutionComponent constants |
+| v0.5.2 | Deny-by-default hooks; full-path enforcement; Stylist/Analyst hook cases; drift-check subprocess hardening; expanded phase-gate coverage; state schema validation; regression harness |

@@ -13,6 +13,68 @@
 
 set -e
 
+WORKSPACE_ROOT=$(pwd -P)
+
+canonicalize_path() {
+  local raw_path="$1"
+  local base_dir="$2"
+
+  if command -v python3 >/dev/null 2>&1; then
+    python3 - "$base_dir" "$raw_path" <<'PY'
+import os
+import sys
+
+base_dir = os.path.realpath(sys.argv[1])
+raw_path = sys.argv[2]
+candidate = raw_path if os.path.isabs(raw_path) else os.path.join(base_dir, raw_path)
+print(os.path.realpath(os.path.normpath(candidate)).replace("\\", "/"))
+PY
+    return
+  fi
+
+  if command -v python >/dev/null 2>&1; then
+    python - "$base_dir" "$raw_path" <<'PY'
+import os
+import sys
+
+base_dir = os.path.realpath(sys.argv[1])
+raw_path = sys.argv[2]
+candidate = raw_path if os.path.isabs(raw_path) else os.path.join(base_dir, raw_path)
+print(os.path.realpath(os.path.normpath(candidate)).replace("\\", "/"))
+PY
+    return
+  fi
+
+  if command -v realpath >/dev/null 2>&1; then
+    case "$raw_path" in
+      /*) realpath -m "$raw_path" ;;
+      *) realpath -m "$base_dir/$raw_path" ;;
+    esac
+    return
+  fi
+
+  echo "BLOCKED: Unable to canonicalize write path. Install python or realpath support for hooks." >&2
+  exit 2
+}
+
+path_is() {
+  [ "$1" = "$2" ]
+}
+
+path_under() {
+  case "$1" in
+    "$2"|"$2"/*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+path_is_ps1_in_dir() {
+  case "$1" in
+    "$2"/*.ps1) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 # Read tool input from stdin
 TOOL_INPUT=$(cat)
 
@@ -24,35 +86,58 @@ if [ -z "$FILE_PATH" ]; then
   exit 0
 fi
 
-# Normalise to basename for matching
-BASENAME=$(basename "$FILE_PATH")
+CANONICAL_PATH=$(canonicalize_path "$FILE_PATH" "$WORKSPACE_ROOT")
+STATE_FILE=$(canonicalize_path ".relay/state.json" "$WORKSPACE_ROOT")
+DOCS_DIR=$(canonicalize_path "docs" "$WORKSPACE_ROOT")
+SCRIPTS_DIR=$(canonicalize_path "scripts" "$WORKSPACE_ROOT")
+SRC_DIR=$(canonicalize_path "src" "$WORKSPACE_ROOT")
+SRC_SOLUTION_DIR=$(canonicalize_path "src/solution" "$WORKSPACE_ROOT")
+PLAN_PATH=$(canonicalize_path "docs/plan.md" "$WORKSPACE_ROOT")
+SECURITY_DESIGN_PATH=$(canonicalize_path "docs/security-design.md" "$WORKSPACE_ROOT")
+SECURITY_TEST_REPORT_PATH=$(canonicalize_path "docs/security-test-report.md" "$WORKSPACE_ROOT")
+CRITIC_REPORT_PATH=$(canonicalize_path "docs/critic-report.md" "$WORKSPACE_ROOT")
+TEST_REPORT_PATH=$(canonicalize_path "docs/test-report.md" "$WORKSPACE_ROOT")
+DRIFT_REPORT_PATH=$(canonicalize_path "docs/drift-report.md" "$WORKSPACE_ROOT")
+REQUIREMENTS_PATH=$(canonicalize_path "docs/requirements.md" "$WORKSPACE_ROOT")
+DESIGN_SYSTEM_PATH=$(canonicalize_path "docs/design-system.md" "$WORKSPACE_ROOT")
+DESIGN_REVIEW_PATH=$(canonicalize_path "docs/design-review.md" "$WORKSPACE_ROOT")
+EXISTING_SOLUTION_PATH=$(canonicalize_path "docs/existing-solution.md" "$WORKSPACE_ROOT")
 
 # --- Check 1: Plan Lock ---
-STATE_FILE=".relay/state.json"
-
 if [ -f "$STATE_FILE" ]; then
-  case "$BASENAME" in
-    plan.md)
-      CHECKSUM=$(jq -r '.plan_checksum // empty' "$STATE_FILE" 2>/dev/null)
-      if [ -n "$CHECKSUM" ]; then
-        echo "BLOCKED: plan.md is locked (checksum: $CHECKSUM). Use /relay:plan-review to unlock and re-review." >&2
-        exit 2
-      fi
-      ;;
-    security-design.md)
-      CHECKSUM=$(jq -r '.security_design_checksum // empty' "$STATE_FILE" 2>/dev/null)
-      if [ -n "$CHECKSUM" ]; then
-        echo "BLOCKED: security-design.md is locked (checksum: $CHECKSUM). Use /relay:plan-review to unlock and re-review." >&2
-        exit 2
-      fi
-      ;;
-  esac
+  if path_is "$CANONICAL_PATH" "$PLAN_PATH"; then
+    CHECKSUM=$(jq -r '.plan_checksum // empty' "$STATE_FILE" 2>/dev/null)
+    if [ -n "$CHECKSUM" ]; then
+      echo "BLOCKED: docs/plan.md is locked (checksum: $CHECKSUM). Use /relay:plan-review to unlock and re-review." >&2
+      exit 2
+    fi
+  fi
+
+  if path_is "$CANONICAL_PATH" "$SECURITY_DESIGN_PATH"; then
+    CHECKSUM=$(jq -r '.security_design_checksum // empty' "$STATE_FILE" 2>/dev/null)
+    if [ -n "$CHECKSUM" ]; then
+      echo "BLOCKED: docs/security-design.md is locked (checksum: $CHECKSUM). Use /relay:plan-review to unlock and re-review." >&2
+      exit 2
+    fi
+  fi
 fi
 
 # --- Check 2: Agent-specific write restrictions ---
-# The CLAUDE_AGENT variable is set by Claude Code when a subagent is active.
-# If it's not set, we're in Conductor context — allow everything.
-AGENT="${CLAUDE_AGENT:-conductor}"
+# The CLAUDE_AGENT variable must be present and known for any write.
+AGENT="${CLAUDE_AGENT:-}"
+
+if [ -z "$AGENT" ]; then
+  echo "BLOCKED: CLAUDE_AGENT is unset. Writes are denied by default until an explicit agent identity is provided." >&2
+  exit 2
+fi
+
+case "$AGENT" in
+  conductor|auditor|critic|sentinel|warden|scout|drafter|stylist|analyst|forge|vault) ;;
+  *)
+    echo "BLOCKED: Unknown agent '$AGENT'. Writes are denied by default." >&2
+    exit 2
+    ;;
+esac
 
 case "$AGENT" in
   auditor)
@@ -63,71 +148,77 @@ case "$AGENT" in
 
   critic)
     # Critic can only write to critic-report.md
-    if [ "$BASENAME" != "critic-report.md" ]; then
-      echo "BLOCKED: Critic can only write to docs/critic-report.md. Found: $FILE_PATH" >&2
+    if ! path_is "$CANONICAL_PATH" "$CRITIC_REPORT_PATH"; then
+      echo "BLOCKED: Critic can only write to docs/critic-report.md. Found: $CANONICAL_PATH" >&2
       exit 2
     fi
     ;;
 
   sentinel)
-    # Sentinel can only write to test-report.md
-    if [ "$BASENAME" != "test-report.md" ]; then
-      echo "BLOCKED: Sentinel can only write to docs/test-report.md. Found: $FILE_PATH" >&2
+    # Sentinel can only write to test-report.md and drift-report.md
+    if ! path_is "$CANONICAL_PATH" "$TEST_REPORT_PATH" && ! path_is "$CANONICAL_PATH" "$DRIFT_REPORT_PATH"; then
+      echo "BLOCKED: Sentinel can only write to docs/test-report.md or docs/drift-report.md. Found: $CANONICAL_PATH" >&2
       exit 2
     fi
     ;;
 
   warden)
     # Warden can only write to security-design.md and security-test-report.md
-    case "$BASENAME" in
-      security-design.md|security-test-report.md) ;;
-      *)
-        echo "BLOCKED: Warden can only write to security-design.md or security-test-report.md. Found: $FILE_PATH" >&2
-        exit 2
-        ;;
-    esac
+    if ! path_is "$CANONICAL_PATH" "$SECURITY_DESIGN_PATH" && ! path_is "$CANONICAL_PATH" "$SECURITY_TEST_REPORT_PATH"; then
+      echo "BLOCKED: Warden can only write to docs/security-design.md or docs/security-test-report.md. Found: $CANONICAL_PATH" >&2
+      exit 2
+    fi
     ;;
 
   scout)
     # Scout can only write to requirements.md
-    if [ "$BASENAME" != "requirements.md" ]; then
-      echo "BLOCKED: Scout can only write to docs/requirements.md. Found: $FILE_PATH" >&2
+    if ! path_is "$CANONICAL_PATH" "$REQUIREMENTS_PATH"; then
+      echo "BLOCKED: Scout can only write to docs/requirements.md. Found: $CANONICAL_PATH" >&2
       exit 2
     fi
     ;;
 
   drafter)
     # Drafter can only write to plan.md and security-design.md (initial draft)
-    case "$BASENAME" in
-      plan.md|security-design.md) ;;
-      *)
-        echo "BLOCKED: Drafter can only write to plan.md or security-design.md. Found: $FILE_PATH" >&2
-        exit 2
-        ;;
-    esac
+    if ! path_is "$CANONICAL_PATH" "$PLAN_PATH" && ! path_is "$CANONICAL_PATH" "$SECURITY_DESIGN_PATH"; then
+      echo "BLOCKED: Drafter can only write to docs/plan.md or docs/security-design.md. Found: $CANONICAL_PATH" >&2
+      exit 2
+    fi
+    ;;
+
+  stylist)
+    # Stylist can only write to design-system.md and design-review.md
+    if ! path_is "$CANONICAL_PATH" "$DESIGN_SYSTEM_PATH" && ! path_is "$CANONICAL_PATH" "$DESIGN_REVIEW_PATH"; then
+      echo "BLOCKED: Stylist can only write to docs/design-system.md or docs/design-review.md. Found: $CANONICAL_PATH" >&2
+      exit 2
+    fi
+    ;;
+
+  analyst)
+    # Analyst can only write to existing-solution.md
+    if ! path_is "$CANONICAL_PATH" "$EXISTING_SOLUTION_PATH"; then
+      echo "BLOCKED: Analyst can only write to docs/existing-solution.md. Found: $CANONICAL_PATH" >&2
+      exit 2
+    fi
     ;;
 
   forge)
-    # Forge cannot write to plan.md or security-design.md
-    case "$BASENAME" in
-      plan.md|security-design.md)
-        echo "BLOCKED: Forge cannot edit locked plan or security design. Report concerns to Conductor." >&2
-        exit 2
-        ;;
-    esac
+    # Forge can only write under src/ or scripts/
+    if ! path_under "$CANONICAL_PATH" "$SRC_DIR" && ! path_under "$CANONICAL_PATH" "$SCRIPTS_DIR"; then
+      echo "BLOCKED: Forge can only write under src/ or scripts/. Found: $CANONICAL_PATH" >&2
+      exit 2
+    fi
     ;;
 
   vault)
-    # Vault cannot write to plan.md or security-design.md
-    case "$BASENAME" in
-      plan.md|security-design.md)
-        echo "BLOCKED: Vault cannot edit locked plan or security design. Report concerns to Conductor." >&2
-        exit 2
-        ;;
-    esac
+    # Vault can only write PowerShell scripts and src/solution/
+    if ! path_under "$CANONICAL_PATH" "$SRC_SOLUTION_DIR" && ! path_is_ps1_in_dir "$CANONICAL_PATH" "$SCRIPTS_DIR"; then
+      echo "BLOCKED: Vault can only write scripts/*.ps1 or files under src/solution/. Found: $CANONICAL_PATH" >&2
+      exit 2
+    fi
     ;;
 
-  conductor|*)
+  conductor)
     # Conductor has full access — allow
     ;;
 esac
