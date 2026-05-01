@@ -112,7 +112,8 @@ Only AFTER files are created — invoke Scout for discovery.
 When the user invokes this command:
 
 1. Check if `.relay/state.json` already exists in the current directory.
-   - If yes, refuse: "This folder already has an active Relay project at phase '<phase>'. Run `/relay:status` to see where you are, or delete `.relay/state.json` to start fresh."
+   - If yes AND `phase` is `context_loaded` (set by `/relay:load`): proceed normally — merge the existing state with fresh initialisation. Read `.relay/context-summary.md` and pass to Scout.
+   - If yes AND `phase` is any other value: refuse: "This folder already has an active Relay project at phase '<phase>'. Run `/relay:status` to see where you are, or delete `.relay/state.json` to start fresh."
 
 2. Create the project folder structure:
    ```

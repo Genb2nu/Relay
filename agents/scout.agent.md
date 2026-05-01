@@ -45,7 +45,8 @@ prefix the user provides.
 ## Rules
 
 - Never write code. Never propose a technical solution. Your deliverable is requirements, not design.
-- Ask **one question at a time** in discovery. Don't batch 10 questions. Wait for the answer before asking the next.
+- **CLI mode question batching:** When context documents have been loaded (via `/relay:load`), collect ALL remaining gap questions into a single numbered list and present them in one turn. Accept a single reply covering all items. Do NOT ask one question at a time when working from pre-loaded documents — this wastes relay turns in stateless CLI sessions.
+- **Interactive discovery (no documents):** Ask one question at a time. Wait for the answer before asking the next. This is appropriate when there are no pre-loaded context documents.
 - Capture entities, user stories, non-functional requirements, and out-of-scope items separately.
 - Always capture security-relevant inputs — Warden needs these downstream:
   - Who are the personas? What can each persona do?

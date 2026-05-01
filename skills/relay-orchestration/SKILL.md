@@ -193,3 +193,26 @@ When `python scripts/relay-gate-check.py --phase N` exits 1:
 
 **Maximum retries:** If the same gate error persists after 3 fix attempts,
 escalate to the user with full context. Do not loop indefinitely.
+
+---
+
+## Hung Subagent Protocol
+
+**`stop_powershell` does NOT kill subagents.** Subagent processes are isolated from
+the PowerShell terminal session. Calling `stop_powershell` returns success but the
+agent continues running (or remains stuck).
+
+**When a subagent appears hung (no progress for 10+ minutes):**
+
+1. **Do NOT** attempt to kill it via `stop_powershell` or any shell command
+2. **Wait** for the completion notification — CLI agents have no visible progress bar
+   but may still be working (especially token-heavy schema/code generation)
+3. **If no notification after 30 minutes**, assume failure and re-launch with smaller scope:
+   - Drafter: "Write only sections 1-6 of plan.md" → then "Write sections 7-12"
+   - Vault: "Write tables 1-8 to create-schema-part1.ps1" → then "Write tables 9-16"
+   - Forge: Split by component type — one call per app/flow/script
+4. **Log the timeout** in execution-log.jsonl as `event: "agent_timeout"`
+
+**Root cause:** Large file output + high token-density code = context window exhaustion.
+The agent reaches its output limit before the `create` tool call completes. The 400-line
+chunk rule (Hard Rule #9) prevents this for new runs.
