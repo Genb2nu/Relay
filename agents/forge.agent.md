@@ -32,6 +32,7 @@ and app module names. Never assume `cr_`. Only declare something manual if it is
 ## Rules
 
 - Read `docs/plan.md` first. If it doesn't exist, return an error to Conductor.
+- **CLI file size limit:** Never write more than 400 lines in a single `create` or `edit` tool call. For large files (pa.yaml screens, flow guides, multi-table scripts), create the file with the first section, then append remaining sections with sequential `edit` calls. This prevents silent context overflow in CLI mode.
 - You MUST NOT edit `docs/plan.md` or `docs/security-design.md`. Report concerns to Conductor.
 - If the plan has "DECISION NEEDED" items, STOP and return them to Conductor.
 - Write all generated artifacts under `src/`:
@@ -378,15 +379,24 @@ If a checklist is needed and you skip it — that is a Forge defect. The user sh
 
 For standard MDA configuration, use Dataverse API directly:
 
-### Sitemap configuration
+### App creation + sitemap configuration
 ```powershell
-# Export current solution, modify sitemap XML, reimport
+# 1. Create the MDA shell
+pac model create --name "<AppName>" --description "<desc>" --environment $orgUrl
+
+# 2. Package sitemap into a minimal solution for import
+#    Do NOT generate standalone sitemap.xml — pac has no command to apply it.
+#    Instead, export the solution, modify sitemap XML, reimport:
 pac solution export --name <SolutionName> --path ./temp-solution.zip
-Expand-Archive ./temp-solution.zip -DestinationPath ./temp-solution
+Expand-Archive ./temp-solution.zip -DestinationPath ./temp-solution -Force
 # Modify ./temp-solution/Customizations.xml — sitemap section
-Compress-Archive ./temp-solution/* -DestinationPath ./temp-solution-modified.zip
+Compress-Archive ./temp-solution/* -DestinationPath ./temp-solution-modified.zip -Force
 pac solution import --path ./temp-solution-modified.zip --force-overwrite --publish-changes
 ```
+
+**Note:** `pac model create` creates a blank MDA shell with no navigation.
+The sitemap MUST be applied via solution export→modify→reimport.
+Generate `scripts/apply-mda-sitemap.ps1` that wraps this pattern.
 
 ### Form XML
 Generate complete form XML with tabs, sections, and fields. Pack into solution and import.
@@ -416,72 +426,58 @@ Tell the user exactly what data sources to add based on the plan:
 ### Fallback if MCP unavailable
 Generate `docs/canvas-app-instructions.md` — mark as PARTIAL in handoff.
 
+**NEVER use `pac canvas pack`.** It is deprecated (PAC CLI 2.6.4+) and incompatible
+with the pa.yaml format. Canvas App deployment is Canvas Authoring MCP only.
+If MCP is not available, the Canvas App is a manual deliverable.
+
 ---
 
 ## Power Automate Flow Pattern
 
-**Flow JSON must be Dataverse clientData format — NEVER Logic Apps ARM format.**
+**Power Automate flows cannot be deployed via CLI.** Solution-layer flow packaging
+is deferred to v0.5.2. For v0.5.1, Forge produces a **markdown build guide**.
 
-The flow JSON written to `src/flows/<name>.json` must use the Dataverse/Power Automate
-native format (flat `triggers` + `actions` structure), NOT the Azure Logic Apps ARM
-template format (nested `properties.definition.triggers`).
+### Output: docs/flow-build-guide.md
 
-**Correct (Dataverse clientData format):**
-```json
-{
-  "triggers": {
-    "When_a_row_is_modified": {
-      "type": "OpenApiConnectionNotification",
-      "inputs": { ... }
-    }
-  },
-  "actions": {
-    "Condition": { "type": "If", ... },
-    "Send_email": { "type": "OpenApiConnection", ... }
-  }
-}
+Write `docs/flow-build-guide.md` with step-by-step instructions for each flow.
+Do NOT generate standalone JSON or solution-layer JSON.
+
+Required structure per flow:
+
+```markdown
+## Flow <N> — <Flow Name>
+
+**Trigger:** <trigger type> on <table> | Filter: <filter expression>
+**Run-as:** <connection reference name> (<identity type>)
+**Concurrency:** <On/Off> | Degree: <N>
+
+### Steps
+
+| # | Action | Type | Details |
+|---|--------|------|---------|
+| 1 | <step name> | <Condition/Action/Scope> | <configuration details> |
+| 2 | ... | ... | ... |
+
+### Condition branches
+<Describe Yes/No branches for each condition>
+
+### Error handling
+<Scope → Try/Catch pattern, configure-run-after settings>
+
+### Connection references required
+- <prefix>_DataverseConnection → Dataverse (Current Environment)
+- <prefix>_OutlookConnection → Office 365 Outlook
+
+### Build instructions
+1. Go to make.powerautomate.com → Solutions → <SolutionName>
+2. + New → Cloud flow → Automated
+3. Trigger: <exact trigger configuration>
+4. Add steps in order per table above
+5. Configure error handling scopes
+6. Save and test
 ```
 
-**WRONG (ARM format — do NOT use):**
-```json
-{
-  "$schema": "...",
-  "contentVersion": "1.0.0.0",
-  "parameters": { ... },
-  "resources": [{
-    "type": "Microsoft.Logic/workflows",
-    "properties": {
-      "definition": {
-        "triggers": { ... }
-      }
-    }
-  }]
-}
-```
-
-**Import and activate pattern:**
-```powershell
-# 1. Generate flow JSON to src/flows/<name>.json (Dataverse format)
-# 2. Pack into solution and import
-pac solution export --name <SolutionName> --path ./solution.zip
-pac solution import --path ./solution-with-flows.zip --activate-plugins
-
-# 3. Activate via clientdata PATCH (automated — NOT manual)
-# Get the flow's workflow record
-$flowUri = "$orgUrl/api/data/v9.2/workflows?`$filter=name eq '<FlowName>' and category eq 5&`$select=workflowid,clientdata"
-$flow = (Invoke-RestMethod -Uri $flowUri -Headers $headers).value[0]
-$flowId = $flow.workflowid
-
-# PATCH clientdata to activate (statecode=1 = activated for cloud flows)
-$activateBody = @{ statecode = 1; statuscode = 2 } | ConvertTo-Json
-Invoke-RestMethod -Method PATCH -Uri "$orgUrl/api/data/v9.2/workflows($flowId)" `
-    -Headers $headers -Body $activateBody -ContentType "application/json"
-```
-
-Read `skills/power-platform-alm/SKILL.md` for the full activation pattern including
-connection reference wiring.
-
-Connection references — create the record but cannot connect:
+### Connection references — create the record (automated), connect (manual):
 ```
 POST /api/data/v9.2/connectionreferences
 Body: {
@@ -493,7 +489,7 @@ Body: {
 
 Always tell the user the 2 remaining manual steps:
 1. Go to Power Automate → Solutions → `<solution>` → Connection References → connect each one
-2. Go to Cloud Flows → turn each flow ON (only if clientdata PATCH activation fails)
+2. Build each flow using the step-by-step guide in `docs/flow-build-guide.md`
 
 ---
 

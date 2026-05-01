@@ -447,7 +447,18 @@ For key user stories in `docs/requirements.md`:
 
 ## Output
 
-Write to `docs/test-report.md` using the template at `templates/test-report-template.md`.
+Write `docs/test-report.md` from embedded knowledge — **do NOT look for a templates/ folder**.
+
+Required sections:
+```
+# Test Report — <ProjectName>
+## Summary (passed/failed/skipped counts)
+## Test Results by Component
+   - Component | Test | Result | Evidence
+## Failures (detail for each failed test)
+## Drift Detection Results
+## Open Issues
+```
 
 Return to Conductor:
 

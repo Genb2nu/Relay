@@ -68,6 +68,39 @@ For solutions with many components (100+), consider segmenting:
 
 Segment only when the component count makes a single solution unwieldy. For small projects, one solution is fine.
 
+### AddSolutionComponent Type Codes
+
+When adding components to a solution via the Dataverse API (`AddSolutionComponent` action),
+use these `ComponentType` integer values:
+
+| Code | Component | Notes |
+|------|-----------|-------|
+| 1 | Entity (Table) | |
+| 2 | Attribute (Column) | |
+| 9 | OptionSet (Choice) | Global only |
+| 10 | EntityRelationship | |
+| 20 | Role (Security Role) | |
+| 29 | Workflow (Cloud Flow) | category=5 for modern flows |
+| 60 | SystemForm | |
+| 62 | WebResource | |
+| 63 | SiteMap | |
+| 70 | FieldSecurityProfile | |
+| 80 | AppModule | Model-driven apps |
+| 91 | PluginAssembly | |
+| 92 | ConnectionReference | |
+| 380 | CanvasApp | |
+
+Example:
+```json
+POST /api/data/v9.2/AddSolutionComponent
+{
+  "ComponentId": "<guid>",
+  "ComponentType": 20,
+  "SolutionUniqueName": "<SolutionName>",
+  "AddRequiredComponents": false
+}
+```
+
 ## PAC CLI Workflow
 
 ### Authentication

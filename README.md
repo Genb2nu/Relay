@@ -4,7 +4,7 @@ A plugin-native SDLC orchestration system for Microsoft Power Platform. Ten spec
 
 Works on **Claude Code**, **GitHub Copilot CLI**, and **Copilot in VS Code**.
 
-> **v0.5.0** — Stylist v2 · Canvas pipeline 3a-3i · 5 new skills · PS 5.1 enforcement · Gate content checks · Output contracts
+> **v0.5.1** — Smoke test fixes · Flow build guide · PS 5.1 strict compat · FLS SP membership · Idempotent roles · AddSolutionComponent constants
 
 ---
 
@@ -418,7 +418,23 @@ Fixes from the Training Request pilot:
 - Canvas App design reading skill + enterprise layout as named reference pattern
 - All v0.3.2 pilot fixes included
 
-### v0.5.0 (current)
+### v0.5.1 (current)
+- **CLI context overflow fix** — Hard Rule #9: 400-line chunk limit for all agents
+- **Template independence** — Drafter, Sentinel, Warden embed output structures (no template file lookups)
+- **Flow build guide** — Forge produces markdown build guide instead of JSON (solution-layer JSON deferred to v0.5.2)
+- **Canvas MCP-only** — `pac canvas pack` explicitly forbidden; Canvas Authoring MCP is the only deployment path
+- **Vault PS 5.1 strict** — Forbidden operator list + parser validation for all generated scripts
+- **Vault idempotent roles** — Existence check filters by name + root BU (prevents duplicates)
+- **Vault FLS SP membership** — Connection reference service principals auto-added to FLS profiles
+- **Vault $PSScriptRoot** — All scripts resolve state.json relative to script location
+- **Scout batch questions** — CLI mode batches gap questions instead of interactive one-at-a-time
+- **Phase 5 pre-flight** — Auth validation + directory pre-creation before any build agent
+- **Hung subagent protocol** — 30-min timeout + re-launch pattern in orchestration skill
+- **load+start merge** — `/relay:start` accepts `phase=context_loaded` from `/relay:load`
+- **MDA sitemap pattern** — Solution export→modify→reimport documented with script generation
+- **AddSolutionComponent constants** — ComponentType code table added to ALM skill
+
+### v0.5.0
 - **Stylist v2** — Mode A (Design) + Mode B (Review); merged design-system.md template with 10 sections including MCP prompts and screen layouts
 - **Canvas pipeline 3a-3i** — 9-step coordinated build between Stylist and Forge
 - **Warden PS 5.1 template** — Mandatory test functions, OData URL variable rule, no PS 7+ syntax

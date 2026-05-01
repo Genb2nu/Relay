@@ -140,6 +140,7 @@ the prefix stored in state.json. When showing examples in agent outputs, use
 6. **Both functional AND security must pass.** Sentinel + Warden both green before sign-off.
 7. **When in doubt, ask the user.** Never decide business or security policy yourself.
 8. **Gate failures are blocking.** Never update `state.json.phase` to the next phase name while a gate is failing. The loop is: agent builds → gate check → if fail → agent fixes → gate check → repeat until pass → advance.
+9. **CLI file size limit.** No agent may write more than 400 lines in a single `create` or `edit` tool call. Large files must be written section-by-section with sequential tool calls. This prevents silent context overflow where the agent stops mid-output with no error.
 
 ---
 
@@ -280,6 +281,27 @@ Forge reads this before creating ANY component. If a GUID exists → modify the 
 ---
 
 ## Phase 5 — BUILD with Inline Verification
+
+### Phase 5 Pre-Flight (MANDATORY before any subagent)
+
+Before invoking Vault, Stylist, or Forge, Conductor MUST:
+
+1. **Validate auth identity:**
+   ```powershell
+   pac auth who
+   pac solution list --environment $env
+   ```
+   If `pac solution list` fails → HALT. Ask user to run `pac auth select` or `pac auth create`.
+
+2. **Pre-create output directories** (subagents cannot create directories in CLI mode):
+   ```powershell
+   $dirs = @("docs", "scripts", "src/flows", "src/canvas-apps", "src/mda", "src/webresources", "src/plugins", ".relay")
+   foreach ($d in $dirs) { if (-not (Test-Path $d)) { New-Item -ItemType Directory -Path $d -Force } }
+   ```
+
+3. **Read state.json** and confirm `phase = "adversarial"` and `plan_locked = true`.
+
+---
 
 Build order with INLINE Sentinel verification after each component.
 Do not batch all verification to Phase 6.

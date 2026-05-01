@@ -41,6 +41,13 @@ Never assume `cr_`. Never hardcode any prefix.
 ## Rules
 
 - Read `docs/plan.md` and `docs/security-design.md` first. If either is missing, return an error to Conductor.
+- **CLI file size limit:** Never write more than 400 lines in a single `create` or `edit` tool call. For large scripts (e.g., 16-table schema creation), split into multiple files or write one table group per tool call. This prevents silent context overflow in CLI mode.
+- **PowerShell 5.1 compatibility (MANDATORY):** All generated `.ps1` scripts must work on Windows PowerShell 5.1 (the Windows default). Forbidden syntax:
+  - `??` (null-coalescing) — use `if ($null -eq $x) { $default } else { $x }`
+  - `?.` (null-conditional) — use `if ($obj) { $obj.Property }`
+  - `&&` / `||` (pipeline chain) — use `; if ($LASTEXITCODE -eq 0) { ... }`
+  - Ternary `$x ? $a : $b` — use `if ($x) { $a } else { $b }`
+  - After writing any `.ps1`, validate with `[System.Management.Automation.Language.Parser]::ParseFile()` — if errors, fix before proceeding.
 - You MUST NOT edit `docs/plan.md` or `docs/security-design.md`. These are locked. If you think something is wrong, return the concern to Conductor.
 - Follow the plan's schema specification exactly — table names, column names, data types, relationships, cascade behaviours.
 - Use Dataverse MCP tools when available. Fall back to PAC CLI if MCP is not connected.
@@ -67,8 +74,25 @@ Always follow this order:
 5. **Relationships** — Create 1:N, N:1, N:N relationships with correct cascade
 6. **Keys** — Create alternate keys if specified
 7. **Security roles** — Create roles with exact privileges from security-design.md
+   - **Idempotency:** Before creating, check existence by name AND root BU:
+     `$filter=name eq '<RoleName>' and _businessunitid_value eq <rootBuId>`
+   - Never filter by name alone — Dataverse allows duplicate role names at different BUs
+   - If role exists at root BU, skip creation and proceed to privilege assignment
 8. **Views** — Create system views as specified
 9. **Sample data** — Load seed/test data if the plan specifies it
+
+## Script Path Resolution
+
+All generated PowerShell scripts MUST resolve `.relay/state.json` and other project
+files relative to `$PSScriptRoot`, not the current working directory:
+```powershell
+$projectRoot = Split-Path $PSScriptRoot -Parent
+$stateFile = Join-Path $projectRoot ".relay\state.json"
+$state = Get-Content $stateFile -Raw | ConvertFrom-Json
+$orgUrl = $state.environment
+$prefix = $state.publisher_prefix
+```
+This prevents path resolution failures when scripts are run from a different directory.
 
 ## Handling Ambiguity
 
@@ -195,6 +219,27 @@ Invoke-RestMethod -Method POST -Uri "$orgUrl/api/data/v9.2/teamprofiles" -Header
 
 When specific users/teams aren't known at build time, create the profiles and document
 the assignment step with exact API calls the user can run — do not simply say "do manually."
+
+### Connection Reference Service Principals (CRITICAL for flows)
+
+Flows that use connection references run as a service principal. That SP must be
+a member of any FLS profile that protects columns the flow reads/writes.
+**If the SP is not in the FLS profile, fields return null silently — no error is thrown.**
+This causes logic bugs (e.g., null comparison evaluates to lowest approval tier).
+
+After creating FLS profiles, look up the connection reference service principal:
+```powershell
+# Get the SP systemuserid from the connection reference
+$connRef = (Invoke-RestMethod -Uri "$orgUrl/api/data/v9.2/connectionreferences?`$filter=connectionreferencelogicalname eq '<prefix>_DataverseConnection'&`$select=_connectionreferenceownerid_value" -Headers $h).value[0]
+$spUserId = $connRef._connectionreferenceownerid_value
+
+# Add SP to FLS profile
+$body = @{
+  "FieldSecurityProfileId@odata.bind" = "/fieldsecurityprofiles(<profile-guid>)"
+  "SystemUserId@odata.bind"           = "/systemusers($spUserId)"
+} | ConvertTo-Json
+Invoke-RestMethod -Method POST -Uri "$orgUrl/api/data/v9.2/systemuserprofiles" -Headers $h -Body $body -ContentType "application/json"
+```
 
 ## State Coordination with Forge
 

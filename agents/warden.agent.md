@@ -82,7 +82,19 @@ Invoked after Vault + Forge complete the build. Your job is to verify security b
 
 **Output (Verification):**
 
-Write to `docs/security-test-report.md` using the template at `templates/security-test-report-template.md`.
+Write `docs/security-test-report.md` from embedded knowledge — **do NOT look for a templates/ folder**.
+
+Required sections:
+```
+# Security Test Report — <ProjectName>
+## Summary (passed/failed counts)
+## Security Test Results
+   - Test | Result | Evidence | Risk if Failed
+## FLS Verification
+## Role Boundary Tests
+## Self-Approval Prevention Test
+## Open Issues
+```
 
 Return to Conductor:
 
