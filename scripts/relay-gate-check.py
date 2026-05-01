@@ -142,7 +142,7 @@ def check_phase4(pi):
 
 
 def check_phase5(pi):
-    """Phase 5 gate: Vault and Forge must complete."""
+    """Phase 5 gate: Vault and Forge must complete. Verify actual artifacts exist."""
     gate = pi["phase_gates"]["phase5_build"]
     errors = []
 
@@ -153,7 +153,58 @@ def check_phase5(pi):
     if gate["components_blocked"]:
         errors.append(f"Components blocked: {gate['components_blocked']}")
 
+    # Content verification — check actual artifacts, not just flags
+    # Check for plugin DLL if plugins are in the plan
+    components = pi.get("components", {})
+    if components.get("plugins"):
+        plugin_dlls = [f for f in _find_files("src/plugins", "*.dll")]
+        if not plugin_dlls:
+            errors.append("Plugins in plan but no .dll found in src/plugins/ — build may not have compiled")
+
+    # Check for flow JSON with Dataverse-shaped content (not ARM)
+    if components.get("flows"):
+        flow_files = _find_files("src/flows", "*.json")
+        if not flow_files:
+            errors.append("Flows in plan but no .json found in src/flows/")
+        else:
+            for ff in flow_files:
+                try:
+                    with open(ff) as fh:
+                        flow_data = json.load(fh)
+                    if "triggers" not in flow_data and "properties" in flow_data:
+                        errors.append(f"{ff} appears ARM-shaped (has 'properties' but no 'triggers') — must be Dataverse clientData format")
+                except (json.JSONDecodeError, IOError):
+                    pass
+
+    # Check for essential scripts
+    essential_scripts = []
+    if components.get("plugins"):
+        essential_scripts.append("scripts/register-plugins.ps1")
+    if components.get("tables"):
+        essential_scripts.append("scripts/seed-test-data.ps1")
+
+    for script in essential_scripts:
+        if not os.path.exists(script):
+            errors.append(f"Required script missing: {script}")
+
+    # Check canvas_app_bootstrapped if canvas app in plan
+    if components.get("canvas_apps"):
+        state_path = ".relay/state.json"
+        if os.path.exists(state_path):
+            with open(state_path) as sf:
+                state = json.load(sf)
+            if not state.get("canvas_app_bootstrapped"):
+                errors.append("Canvas App in plan but state.json.canvas_app_bootstrapped is not true")
+
     return errors
+
+
+def _find_files(directory, pattern):
+    """Find files matching a glob pattern in a directory."""
+    import glob
+    if not os.path.exists(directory):
+        return []
+    return glob.glob(os.path.join(directory, "**", pattern), recursive=True)
 
 
 def check_phase6(pi):

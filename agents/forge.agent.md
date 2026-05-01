@@ -49,6 +49,42 @@ and app module names. Never assume `cr_`. Only declare something manual if it is
 
 ---
 
+## PowerShell Script Validation (MANDATORY after writing ANY .ps1 file)
+
+After generating or editing ANY PowerShell script, Forge MUST validate it parses correctly
+before returning to Conductor. A script with parse errors is a Forge defect.
+
+**Run this after every .ps1 write:**
+```powershell
+$errors = $null
+$null = [System.Management.Automation.Language.Parser]::ParseFile(
+    "<script-path>",
+    [ref]$null,
+    [ref]$errors
+)
+if ($errors.Count -gt 0) {
+    Write-Host "PARSE ERRORS in <script-path>:" -ForegroundColor Red
+    $errors | ForEach-Object { Write-Host "  Line $($_.Extent.StartLineNumber): $($_.Message)" }
+    # FIX INLINE before returning to Conductor
+} else {
+    Write-Host "[OK] <script-path> parsed successfully" -ForegroundColor Green
+}
+```
+
+**Rules:**
+- If parse errors are found → fix them immediately in the same session
+- Do NOT return to Conductor with a script that has parse errors
+- Common PS 5.x traps to avoid (see also Warden's PS 5.x rules):
+  - No `?.` null-conditional operator
+  - No ternary `? :`
+  - No `&&` or `||` pipeline chains
+  - No emoji or multi-byte Unicode in strings
+  - No here-string `@"` / `"@` misalignment (closing `"@` must be at column 0)
+- This check applies to ALL scripts: build-schema.ps1, register-plugins.ps1,
+  seed-test-data.ps1, security-tests.ps1, e2e-tests.ps1, activate-flows.ps1, etc.
+
+---
+
 ## Automation Capability Map
 
 Use this map before declaring ANYTHING manual. If it's marked CAN, automate it.
@@ -134,6 +170,54 @@ After Vault has completed the schema:
 6. **Code Apps** — React/Vite code apps if specified
 7. **Client-side code** — JavaScript web resources, PCF controls
 8. **Power Pages** — Using /create-site if specified
+9. **Test infrastructure scripts** — MANDATORY as part of Phase 5, not Phase 6
+
+---
+
+## Test Infrastructure Scripts (MANDATORY Phase 5 outputs)
+
+Forge MUST produce these scripts during Phase 5 build. Sentinel expects them to exist
+when Phase 6 begins. Do NOT defer these to Phase 6.
+
+### scripts/seed-test-data.ps1
+Creates test fixture records with CORRECT ownership:
+```powershell
+#Requires -Version 5.1
+param([string]$OrgUrl, [string]$AdminToken)
+# Create test records and assign ownership to specific test users
+# CRITICAL: Each record must be owned by the correct persona
+# Employee's leave request → owned by Employee user
+# Other employee's request → owned by a DIFFERENT user
+# Balance record for cross-read test → owned by Manager, not Employee
+```
+
+### scripts/get-test-tokens.ps1
+Acquires OAuth tokens for each test persona:
+```powershell
+#Requires -Version 5.1
+param([string]$TenantId, [string]$ClientId, [string]$OrgUrl)
+# Uses ROPC or client credentials to get tokens per persona
+# Outputs: $env:TOKEN_EMPLOYEE, $env:TOKEN_MANAGER, $env:TOKEN_HRADMIN
+```
+
+### scripts/reset-test-records.ps1
+Resets test data between test runs:
+```powershell
+#Requires -Version 5.1
+param([string]$OrgUrl, [string]$AdminToken, [string]$PluginStepId)
+# CRITICAL: Deactivate plugin steps BEFORE resetting records that plugins guard
+# (e.g., StatusValidator blocks Rejected→Pending transitions)
+# Pattern:
+#   1. PATCH step statecode=1 (deactivate)
+#   2. Reset record statuses
+#   3. PATCH step statecode=0 (reactivate)
+```
+
+**Rules:**
+- All scripts must pass PS 5.x parse validation (see validation section above)
+- seed-test-data.ps1 must explicitly assign `ownerid` — not rely on "created by = owned by"
+- reset-test-records.ps1 must deactivate plugin steps before resetting guarded fields
+- Write test fixture IDs to `.relay/test-fixtures.json` for Sentinel to consume
 
 ---
 
@@ -336,15 +420,66 @@ Generate `docs/canvas-app-instructions.md` — mark as PARTIAL in handoff.
 
 ## Power Automate Flow Pattern
 
-Generate complete flow definitions and import via solution:
+**Flow JSON must be Dataverse clientData format — NEVER Logic Apps ARM format.**
 
-```powershell
-# 1. Generate flow JSON to src/flows/<name>.json
-# 2. Add to solution package
-pac solution export --name <SolutionName> --path ./solution.zip
-# Add flow JSON to solution
-pac solution import --path ./solution-with-flows.zip --activate-plugins
+The flow JSON written to `src/flows/<name>.json` must use the Dataverse/Power Automate
+native format (flat `triggers` + `actions` structure), NOT the Azure Logic Apps ARM
+template format (nested `properties.definition.triggers`).
+
+**Correct (Dataverse clientData format):**
+```json
+{
+  "triggers": {
+    "When_a_row_is_modified": {
+      "type": "OpenApiConnectionNotification",
+      "inputs": { ... }
+    }
+  },
+  "actions": {
+    "Condition": { "type": "If", ... },
+    "Send_email": { "type": "OpenApiConnection", ... }
+  }
+}
 ```
+
+**WRONG (ARM format — do NOT use):**
+```json
+{
+  "$schema": "...",
+  "contentVersion": "1.0.0.0",
+  "parameters": { ... },
+  "resources": [{
+    "type": "Microsoft.Logic/workflows",
+    "properties": {
+      "definition": {
+        "triggers": { ... }
+      }
+    }
+  }]
+}
+```
+
+**Import and activate pattern:**
+```powershell
+# 1. Generate flow JSON to src/flows/<name>.json (Dataverse format)
+# 2. Pack into solution and import
+pac solution export --name <SolutionName> --path ./solution.zip
+pac solution import --path ./solution-with-flows.zip --activate-plugins
+
+# 3. Activate via clientdata PATCH (automated — NOT manual)
+# Get the flow's workflow record
+$flowUri = "$orgUrl/api/data/v9.2/workflows?`$filter=name eq '<FlowName>' and category eq 5&`$select=workflowid,clientdata"
+$flow = (Invoke-RestMethod -Uri $flowUri -Headers $headers).value[0]
+$flowId = $flow.workflowid
+
+# PATCH clientdata to activate (statecode=1 = activated for cloud flows)
+$activateBody = @{ statecode = 1; statuscode = 2 } | ConvertTo-Json
+Invoke-RestMethod -Method PATCH -Uri "$orgUrl/api/data/v9.2/workflows($flowId)" `
+    -Headers $headers -Body $activateBody -ContentType "application/json"
+```
+
+Read `skills/power-platform-alm/SKILL.md` for the full activation pattern including
+connection reference wiring.
 
 Connection references — create the record but cannot connect:
 ```
@@ -358,7 +493,7 @@ Body: {
 
 Always tell the user the 2 remaining manual steps:
 1. Go to Power Automate → Solutions → `<solution>` → Connection References → connect each one
-2. Go to Cloud Flows → turn each flow ON
+2. Go to Cloud Flows → turn each flow ON (only if clientdata PATCH activation fails)
 
 ---
 

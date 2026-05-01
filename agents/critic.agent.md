@@ -97,3 +97,29 @@ Adversarial findings: <N> (critical: <N>, major: <N>, minor: <N>)
 - If the checklist passes cleanly and you have no adversarial findings, approve immediately. Don't invent problems to justify your existence.
 - If you're unsure whether something is a real issue or a style preference, flag it as **minor** — let Drafter decide.
 - Refer to `skills/power-platform-footgun-checklist/SKILL.md` for the checklist.
+
+## plan-index.json Output Contract (MANDATORY)
+
+Include these values in your handoff so Conductor can write them to `.relay/plan-index.json`:
+
+```json
+{
+  "phase_gates": {
+    "phase4_adversarial": {
+      "critic_approved": true,
+      "checklist_passed": 20,
+      "checklist_failed": 0,
+      "checklist_na": 3,
+      "adversarial_findings": 0,
+      "plan_locked": true,
+      "plan_checksum": "<sha256 of plan.md>",
+      "security_design_checksum": "<sha256 of security-design.md>",
+      "validated_at": "<ISO 8601 timestamp>"
+    }
+  }
+}
+```
+
+- `critic_approved`: `true` only if verdict = approved
+- `plan_locked`: `true` only when Critic approves — Conductor computes and stores checksums
+- Checksums: Conductor computes SHA256 of `plan.md` and `security-design.md` at lock time

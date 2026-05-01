@@ -11,6 +11,15 @@ trigger_keywords:
 
 When the user invokes this command:
 
+0. **Run prerequisite check FIRST** — before checking for existing projects or creating files:
+   ```powershell
+   $env:PYTHONUTF8 = "1"
+   python scripts/relay-prerequisite-check.py
+   ```
+   - If exit code 1 (critical failures): show output to user, offer `--fix`, do NOT proceed.
+   - If exit code 0: show summary (especially warnings), then continue.
+   - In VS Code mode, use `--skip-plugins` flag (Copilot CLI plugins not applicable).
+
 1. Check if `.relay/state.json` already exists in the current directory.
    - If yes, refuse: "This folder already has an active Relay project at phase '<phase>'. Run `/relay:status` to see where you are, or delete `.relay/state.json` to start fresh."
 

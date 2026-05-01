@@ -154,3 +154,42 @@ In Copilot VS Code (no true parallelism): run sequentially in the same session.
 In Claude Code (true Task tool): dispatch simultaneously, wait for both.
 
 Either way — both must complete and pass before the phase gate clears.
+
+---
+
+## Gate Failed — What To Do
+
+When `python scripts/relay-gate-check.py --phase N` exits 1:
+
+**Conductor MUST NOT:**
+- Update `state.json.phase` to the next phase
+- Skip the gate and invoke the next phase's agents
+- Tell the user "we'll fix it later"
+
+**Conductor MUST:**
+1. Read the gate error output (printed to stdout)
+2. Identify which agent is responsible for each error
+3. Route the specific error(s) back to that agent
+4. After the agent fixes → re-run the gate
+5. Repeat until exit 0
+
+**Error routing table:**
+| Gate error contains | Route to |
+|---|---|
+| "Auditor has not approved" | Auditor (re-review) |
+| "Warden has not approved" | Warden (re-review) |
+| "Critic has not approved" | Critic (re-review) |
+| "Vault has not completed" | Vault (fix schema) |
+| "Forge has not completed" | Forge (fix build) |
+| "Sentinel verification not passed" | Sentinel → identify failure → route to Forge |
+| "security tests failed" | Forge/Vault fix → Warden re-test |
+| "drift detected" | Forge (fix missing components) |
+| "inconsistent with docs" | Drafter (update plan or fix plan-index) |
+| "DECISION NEEDED" | Ask user |
+| "Required script missing" | Forge (generate the script) |
+| "no .dll found" | Forge (compile plugin) |
+| "ARM-shaped" | Forge (regenerate flow in Dataverse format) |
+| "canvas_app_bootstrapped" | Print Canvas bootstrap checklist to user |
+
+**Maximum retries:** If the same gate error persists after 3 fix attempts,
+escalate to the user with full context. Do not loop indefinitely.

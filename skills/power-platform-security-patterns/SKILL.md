@@ -142,3 +142,63 @@ Start every role with zero privileges. Add only what the persona needs. Never co
 ### Pattern: Test User Matrix
 
 For every persona, create a test user assigned ONLY that role. Use these test users during verification (Phase 6) to prove the security boundaries hold.
+
+---
+
+## Flat Single-BU Limitation (CRITICAL for security design)
+
+### The Problem
+
+In environments with only ONE Business Unit (the default "root" BU, no children):
+
+- **Basic (User) depth** and **Local (BU) depth** provide IDENTICAL access for READ operations
+- All users are in the same BU, so "BU scope" = "all records"
+- This means "User scope Read" does NOT restrict a user to only their own records in list queries
+- The user CAN still see all records via API, Advanced Find, and views
+
+### When This Matters
+
+| Requirement | Flat-BU works? | Multi-BU required? |
+|---|---|---|
+| Users see all records, restricted write/delete | Yes | No |
+| Users see ONLY their own records | **NO** | Yes (or Access Teams) |
+| Managers see their team's records only | **NO** | Yes (hierarchy security + child BUs) |
+| Admin sees everything, users see subset | **NO** for row-level | Yes |
+
+### Solutions for Row-Level Isolation
+
+1. **Create child Business Units** (recommended):
+   - One BU per department or team
+   - Assign users to their BU
+   - Basic depth now means "only records owned by me"
+   - Local depth means "only records in my BU"
+
+2. **Access Teams** (per-record sharing):
+   - Create an Access Team Template on the entity
+   - Add specific users to each record's access team
+   - Users only see records where they're team members
+   - More flexible but more complex to manage
+
+3. **Owner filtering in views** (NOT security — UX only):
+   - Filter views to `ownerid eq currentuser`
+   - Does NOT prevent Web API or Advanced Find access
+   - Acceptable only when the data is not sensitive
+
+### Warden's Decision Framework
+
+When reviewing security-design.md, check:
+1. Does the plan assume row-level READ isolation?
+2. Is the environment flat single-BU?
+3. If both → flag as CRITICAL: "Row isolation requires child BUs or Access Teams"
+
+### Test Implications (for Sentinel)
+
+Tests that verify "user cannot see another user's records" will FAIL in flat-BU
+environments. Tag these as `[ARCH-REQUIRED]` — they require multi-BU topology:
+
+- T-SEC-01 type tests (employee cannot read other employee's records)
+- T-BAL type tests (employee cannot read another's balance)
+- Any test that expects an empty result set from a filtered-by-ownership query
+
+These failures are ENVIRONMENT limitations, not code defects. The security design
+is correct; the environment topology doesn't support the enforcement model.

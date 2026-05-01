@@ -16,7 +16,8 @@ const { execSync } = require("child_process");
 
 function commandExists(cmd) {
   try {
-    execSync(`which ${cmd}`, { stdio: "ignore" });
+    const checkCmd = process.platform === "win32" ? `where ${cmd}` : `which ${cmd}`;
+    execSync(checkCmd, { stdio: "ignore" });
     return true;
   } catch {
     return false;
@@ -121,10 +122,21 @@ for (const tool of tools) {
 }
 
 // --- Check for Superpowers and Power Platform skills ---
+console.log("\n--- MCP Server Detection ---\n");
+
+// Check for Dataverse MCP
+const dataverseMcpExists = commandExists("dataverse-mcp") ||
+  (() => { try { execSync("dotnet tool list -g", { encoding: "utf8", stdio: "pipe" }).includes("dataverse"); } catch { return false; } })();
+
+if (dataverseMcpExists) {
+  console.log("  ✓ Dataverse MCP detected (global dotnet tool)");
+} else {
+  console.log("  ⚠ Dataverse MCP not detected — required for Vault, Warden, Analyst");
+  console.log("    Install: dotnet tool install --global Microsoft.PowerPlatform.Dataverse.MCP");
+  console.log("    Or enable cloud MCP in PPAC: https://<org>.crm.dynamics.com/api/mcp");
+}
+
 console.log("\n--- Recommended companion plugins ---\n");
-console.log("  Superpowers (workflow backbone):");
-console.log("    /plugin marketplace add obra/superpowers-marketplace");
-console.log("    /plugin install superpowers@superpowers-marketplace\n");
 console.log("  Microsoft Power Platform skills:");
 console.log("    /plugin marketplace add microsoft/power-platform-skills");
 console.log("    /plugin install power-pages@power-platform-skills");

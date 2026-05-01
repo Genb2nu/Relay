@@ -261,6 +261,141 @@ Playwright is additive — it tests the UI layer. PowerShell e2e-tests.ps1 tests
 the API layer. Warden's security-tests.ps1 tests security boundaries.
 All three must pass independently.
 
+---
+
+## Phase 6 Pre-Check (MANDATORY — run BEFORE any test execution)
+
+Before running e2e-tests.ps1 or security-tests.ps1, Sentinel MUST validate
+the test environment. Skipping this invalidates all results.
+
+**Generate and run `scripts/pre-phase6-check.ps1`:**
+
+```powershell
+#Requires -Version 5.1
+# pre-phase6-check.ps1 — validates test environment before any test execution
+
+param(
+    [Parameter(Mandatory)][string]$OrgUrl,
+    [Parameter(Mandatory)][string]$EmployeeToken,
+    [Parameter(Mandatory)][string]$ManagerToken,
+    [Parameter(Mandatory)][string]$HRAdminToken,
+    [string]$TestRecordId,
+    [string]$OtherEmployeeRecordId,
+    [string]$TestBalanceRecordId
+)
+
+$blocker = $false
+
+Write-Host "=== Phase 6 Pre-Check ===" -ForegroundColor Cyan
+
+# CHECK 1: Verify test users do NOT have System Administrator or System Customizer
+$tokens = @{
+    Employee = $EmployeeToken
+    Manager  = $ManagerToken
+    HRAdmin  = $HRAdminToken
+}
+
+foreach ($persona in $tokens.Keys) {
+    $h = @{ Authorization = "Bearer $($tokens[$persona])"; "OData-Version" = "4.0" }
+    $whoUri = "$OrgUrl/api/data/v9.2/WhoAmI"
+    try {
+        $who = Invoke-RestMethod -Uri $whoUri -Headers $h
+        $userId = $who.UserId
+
+        # Get user's security roles
+        $rolesUri = "$OrgUrl/api/data/v9.2/systemusers($userId)/systemuserroles_association?`$select=name,roleid"
+        $roles = (Invoke-RestMethod -Uri $rolesUri -Headers $h).value
+        $dangerRoles = $roles | Where-Object { $_.name -match "System Administrator|System Customizer" }
+
+        if ($dangerRoles) {
+            Write-Host "[BLOCKER] $persona user has: $($dangerRoles.name -join ', ')" -ForegroundColor Red
+            Write-Host "  -> This bypasses ALL Dataverse security. Tests are INVALID." -ForegroundColor Red
+            $blocker = $true
+        } else {
+            Write-Host "[OK] $persona user roles: $($roles.name -join ', ')" -ForegroundColor Green
+        }
+    } catch {
+        Write-Host "[ERROR] Cannot validate $persona - token may be expired" -ForegroundColor Yellow
+    }
+}
+
+# CHECK 2: Verify test fixture records exist and are owned correctly
+if ($TestRecordId) {
+    $h = @{ Authorization = "Bearer $EmployeeToken"; "OData-Version" = "4.0" }
+    try {
+        $who = Invoke-RestMethod -Uri "$OrgUrl/api/data/v9.2/WhoAmI" -Headers $h
+        # Note: replace <prefix> with actual publisher prefix from state.json
+        Write-Host "[INFO] TestRecordId provided: $TestRecordId" -ForegroundColor Cyan
+        Write-Host "  Verify manually: record should be OWNED by Employee user ($($who.UserId))" -ForegroundColor Cyan
+    } catch {
+        Write-Host "[WARN] Cannot validate Employee token" -ForegroundColor Yellow
+    }
+}
+
+if ($TestBalanceRecordId -and $EmployeeToken) {
+    Write-Host "[INFO] TestBalanceRecordId provided: $TestBalanceRecordId" -ForegroundColor Cyan
+    Write-Host "  For cross-read tests: this record must be owned by a DIFFERENT user than Employee" -ForegroundColor Cyan
+}
+
+# CHECK 3: Detect flat single-BU environment
+$h = @{ Authorization = "Bearer $EmployeeToken"; "OData-Version" = "4.0" }
+try {
+    $buUri = "$OrgUrl/api/data/v9.2/businessunits?`$select=name,businessunitid&`$filter=parentbusinessunitid ne null"
+    $childBUs = (Invoke-RestMethod -Uri $buUri -Headers $h).value
+    if ($childBUs.Count -eq 0) {
+        Write-Host ""
+        Write-Host "[ARCH-WARNING] Flat single-BU environment detected" -ForegroundColor Yellow
+        Write-Host "  Tests tagged [ARCH-REQUIRED] will legitimately fail:" -ForegroundColor Yellow
+        Write-Host "  - Row-level read isolation (Basic depth = see all in single BU)" -ForegroundColor Yellow
+        Write-Host "  - Cross-BU boundary enforcement" -ForegroundColor Yellow
+        Write-Host "  - Manager hierarchy isolation" -ForegroundColor Yellow
+        Write-Host "  This is an ENVIRONMENT limitation, not a code defect." -ForegroundColor Yellow
+    } else {
+        Write-Host "[OK] $($childBUs.Count) child Business Unit(s) found - row isolation testable" -ForegroundColor Green
+    }
+} catch {
+    Write-Host "[WARN] Cannot query Business Units" -ForegroundColor Yellow
+}
+
+Write-Host ""
+if ($blocker) {
+    Write-Host "=== PRE-CHECK FAILED ===" -ForegroundColor Red
+    Write-Host "Remove System Administrator/Customizer from test users before running." -ForegroundColor Red
+    exit 1
+} else {
+    Write-Host "=== PRE-CHECK PASSED ===" -ForegroundColor Green
+    exit 0
+}
+```
+
+**Sentinel rules for pre-check results:**
+- Exit 1 (BLOCKER) → STOP. Do not run any tests. Return to Conductor:
+  "Phase 6 blocked: test users have System Administrator. Remove before testing."
+- [ARCH-WARNING] → proceed, but tag affected tests `[ARCH-REQUIRED]` in test-report.md.
+  These are expected failures in flat-BU environments, not code defects.
+- [WARN] on record ownership → proceed, note in test report which ownership tests
+  may give false positives.
+
+---
+
+## Test Infrastructure Scripts (expected from Forge)
+
+Sentinel expects these scripts to exist when Phase 6 begins (Forge produces them in Phase 5):
+
+| Script | Purpose | If missing |
+|---|---|---|
+| `scripts/seed-test-data.ps1` | Creates fixture records with correct ownership | Run pre-check manually; flag to Conductor |
+| `scripts/get-test-tokens.ps1` | Acquires per-persona OAuth tokens | Cannot run any security tests |
+| `scripts/reset-test-records.ps1` | Resets data between test runs | Tests may have state leakage |
+
+**If any script is missing:** Do NOT attempt to create it yourself. Report to Conductor:
+"Phase 6 blocked: `scripts/<name>.ps1` missing. Route to Forge."
+
+**If fixtures don't exist in environment:** Run `scripts/seed-test-data.ps1` before tests.
+Read `.relay/test-fixtures.json` for record IDs to pass to pre-phase6-check.ps1.
+
+---
+
 ## What You Test
 
 ### 1. Plan Coverage
@@ -427,11 +562,28 @@ After verification, Sentinel MUST write results to `.relay/plan-index.json`:
 {
   "phase_gates": {
     "phase6_verify": {
-      "sentinel_approved": true
+      "sentinel_approved": true,
+      "tests_run": 12,
+      "tests_passed": 12,
+      "tests_failed": 0,
+      "drift_detected": false,
+      "drift_items": [],
+      "pre_check_passed": true,
+      "arch_warnings": ["flat-BU: row isolation tests tagged ARCH-REQUIRED"],
+      "validated_at": "<ISO 8601 timestamp>"
     }
   }
 }
 ```
+
+- `sentinel_approved`: `true` only if ALL tests pass AND no drift detected
+- `tests_run/passed/failed`: from e2e-tests.ps1 + Playwright combined
+- `drift_detected`: result of `relay-drift-check.py`
+- `drift_items`: list of missing/changed components if drift found
+- `pre_check_passed`: result of pre-phase6-check.ps1
+- `arch_warnings`: any [ARCH-REQUIRED] or [ARCH-WARNING] items noted
+
+Include these values in your handoff so Conductor can write them.
 
 And also run drift detection:
 

@@ -133,7 +133,12 @@ Neither agent sees the other's output before completing their own review.
 
 ## Copilot VS Code — Sequential Fallback
 
-Copilot VS Code doesn't support true parallel subagents.
+Copilot VS Code doesn't support true parallel subagents or `/fleet`.
 Run Phase 3 as: Auditor first, then Warden, both in same session.
 Conductor still collects both outputs before proceeding.
 Do NOT let Warden see Auditor's output before completing its own review.
+
+**Important:** `/fleet` is exclusive to Copilot CLI. In VS Code Agent Mode,
+Conductor runs all agents sequentially with identical output quality. Do not
+attempt to use `/fleet` syntax in VS Code — it will be ignored. The sequential
+approach is functionally equivalent; only parallelism (speed) differs.

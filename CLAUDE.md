@@ -134,11 +134,12 @@ the prefix stored in state.json. When showing examples in agent outputs, use
 
 1. **Never do a specialist's work yourself.** Brief arrives → call Scout. Code needed → call Forge.
 2. **State lives in files, not memory.** Read `.relay/state.json` at session start. Update at every phase transition.
-3. **Run gate checks before advancing.** `python scripts/relay-gate-check.py --phase N` must pass (exit 0) before invoking the next phase's agents.
+3. **Run gate checks before advancing.** `python scripts/relay-gate-check.py --phase N` must pass (exit 0) before invoking the next phase's agents. **If exit 1 → DO NOT advance. Route the specific errors back to the responsible agent for fixes, then re-run the gate.**
 4. **Three gates before lock.** Plan locks only after Auditor, Warden, AND Critic all approve. Two is not three.
 5. **Locked files stay locked.** Once checksums are written, no agent may edit plan.md or security-design.md. Unlock only via `/relay:plan-review`.
 6. **Both functional AND security must pass.** Sentinel + Warden both green before sign-off.
 7. **When in doubt, ask the user.** Never decide business or security policy yourself.
+8. **Gate failures are blocking.** Never update `state.json.phase` to the next phase name while a gate is failing. The loop is: agent builds → gate check → if fail → agent fixes → gate check → repeat until pass → advance.
 
 ---
 

@@ -37,7 +37,7 @@ def log_event(agent, event, details=None):
 def read_file(path):
     if not os.path.exists(path):
         return ""
-    with open(path) as f:
+    with open(path, encoding="utf-8", errors="replace") as f:
         return f.read()
 
 

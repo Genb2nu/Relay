@@ -4,7 +4,7 @@ A plugin-native SDLC orchestration system for Microsoft Power Platform. Ten spec
 
 Works on **Claude Code**, **GitHub Copilot CLI**, and **Copilot in VS Code**.
 
-> **v0.4.0** — Playwright E2E testing · /fleet parallel execution · Phase 5 inline verification · All pilot fixes
+> **v0.5.0** — Stylist v2 · Canvas pipeline 3a-3i · 5 new skills · PS 5.1 enforcement · Gate content checks · Output contracts
 
 ---
 
@@ -46,7 +46,7 @@ Every phase transition is gate-validated. The plan locks with SHA256 checksums a
 /plugin install canvas-apps@power-platform-skills
 /plugin install model-apps@power-platform-skills
 /plugin install power-pages@power-platform-skills
-/plugin install code-apps@power-platform-skills
+/plugin install code-apps-preview@power-platform-skills
 ```
 
 | Plugin | Forge uses it for |
@@ -54,9 +54,11 @@ Every phase transition is gate-validated. The plan locks with SHA256 checksums a
 | `canvas-apps` | `/configure-canvas-mcp`, `/generate-canvas-app`, `/edit-canvas-app` |
 | `model-apps` | `/genpage` — custom React pages in Model-Driven Apps |
 | `power-pages` | `/create-site` — Power Pages portals |
-| `code-apps` | `/create-code-app`, `/add-dataverse`, `/add-office365`, `/deploy` |
+| `code-apps-preview` | `/create-code-app`, `/add-dataverse`, `/add-office365`, `/deploy` |
 
 > **No Superpowers needed.** All orchestration, discovery, planning, verification, and debugging skills are embedded in Relay.
+
+> **Prerequisite check:** Run `python scripts/relay-prerequisite-check.py` before starting a project. This validates all CLI tools, auth, MCP servers, plugins, and skills are properly configured. Use `--fix` to attempt auto-remediation of missing components.
 
 ### Required: Dataverse MCP
 
@@ -359,10 +361,14 @@ No Superpowers required. All skills are embedded:
 | `canvas-app-design-patterns` | RGBA tokens, WCAG ratios, gallery/badge patterns |
 | `canvas-app-design-reading` | Analyze any screenshot and extract layout patterns |
 | `canvas-app-enterprise-layout` | Named reference: pill nav left, search top, table body |
-| `playwright-testing` | Power Platform Playwright toolkit patterns, Page Object Model, MCP |
-| `canvas-app-design-reading` | How to analyze any screenshot and extract layout patterns |
-| `canvas-app-enterprise-layout` | Named reference pattern: pill nav, search bar, data table |
+| `canvas-app-screen-layout` | 6 layout archetypes with zone diagrams + responsive formulas |
+| `canvas-mcp-prompt-patterns` | Prompt library: known-good/bad patterns, /edit patterns |
+| `dataverse-plugin-deployment-cycle` | 7-step plugin deploy: compile → upload → verify |
+| `dataverse-privilege-depth-patterns` | Flat-BU handling, AddPrivilegesRole/RemovePrivilegeRole APIs |
+| `dataverse-schema-api` | Table/column creation patterns, relationships, existence checks |
 | `playwright-testing` | Playwright E2E for Canvas + MDA with Page Object Model |
+| `relay-auditing` | 20-point completeness checklist for plan review |
+| `relay-analysis` | Component inventory patterns for existing solutions |
 
 ---
 
@@ -375,7 +381,7 @@ relay/
 ├── hooks/               # PreToolUse enforcement (Write/Edit + Bash phase gates)
 ├── schemas/             # plan-index.schema.json
 ├── scripts/             # Gate validation, drift detection, scoring (Python)
-├── skills/              # 14 embedded knowledge bases
+├── skills/              # 21 embedded knowledge bases
 ├── templates/           # 7 document templates
 ├── docs-internal/       # adversarial-pilot-guide.md
 ├── lib/                 # Shared bash utilities
@@ -387,7 +393,7 @@ relay/
 
 ## Roadmap
 
-### v0.3.2 (next release)
+### v0.3.2
 Fixes from the Training Request pilot:
 - Publisher prefix captured in Scout's first question — never defaults to `cr_`
 - `plan-index.json` created in `commands/start.md` as first action — can't be skipped
@@ -404,48 +410,37 @@ Fixes from the Training Request pilot:
 - `/relay:audit`, `/relay:change`, `/relay:visualise` updated with `/fleet`
 - Phase 5b inline verification — Sentinel verifies each component immediately
 
-### v0.4 (parallel execution)
-- **Claude Code**: Full parallel Phase 3/5/6 using the `Task` tool — true isolated subagents with independent context windows, file access, and tool permissions. Each agent runs simultaneously, not sequentially.
-- **Copilot CLI**: Full `/fleet` integration — structured prompts for every parallel phase, dependency-aware DAG scheduling, `@agent-name` syntax for Relay specialists.
-- **VS Code**: Sequential-with-inline-verification as the fallback (already designed in v0.3.2).
-- **Cross-project memory**: `/relay:learn` command reads completed project execution logs and promotes repeated patterns into skill files automatically.
-- **Web dashboard**: Reads `.relay/execution-log.jsonl` and `plan-index.json` and renders project status visually — for stakeholders and team leads who don't want to read JSON.
-
----
-
-## Roadmap
-
-### v0.4.0 (current)
-- Playwright E2E testing via `power-platform-playwright-toolkit`
-- Sentinel generates TypeScript test files from user stories
-- `/fleet` parallel execution prompts for Copilot CLI
+### v0.4.0
+- Playwright E2E testing via `power-platform-playwright-toolkit` + Playwright MCP
+- `/fleet` parallel execution for Copilot CLI (Phase 3, 5a, 5b, 6, audit, change, visualise)
+- Sentinel generates TypeScript tests from requirements, Page Objects from plan
 - Phase 5 inline verification (Sentinel verifies each component immediately)
-- All v0.3.2 pilot fixes: publisher prefix in Scout, plan-index.json in start.md,
-  post-compact ALM re-read, Vault ownership checks, Forge proactive checklists,
-  Canvas App accessibility (AccessibleLabel), footgun #24+#25
+- Canvas App design reading skill + enterprise layout as named reference pattern
+- All v0.3.2 pilot fixes included
+
+### v0.5.0 (current)
+- **Stylist v2** — Mode A (Design) + Mode B (Review); merged design-system.md template with 10 sections including MCP prompts and screen layouts
+- **Canvas pipeline 3a-3i** — 9-step coordinated build between Stylist and Forge
+- **Warden PS 5.1 template** — Mandatory test functions, OData URL variable rule, no PS 7+ syntax
+- **Vault plugin deployment** — Full 7-step cycle with pre-images, cache flush, verify
+- **Vault privilege depth** — AddPrivilegesRole/RemovePrivilegeRole API patterns, flat-BU handling
+- **Sentinel pre-check** — SysAdmin detection, fixture ownership validation, flat-BU detection
+- **Forge parse validation** — `[System.Management.Automation.Language.Parser]::ParseFile()` mandatory after every .ps1
+- **Forge test scripts** — seed-test-data.ps1, get-test-tokens.ps1, reset-test-records.ps1 as Phase 5 outputs
+- **Forge flow JSON format** — Dataverse clientData format enforced (not ARM template)
+- **Gate content checks** — Phase 5 gate validates plugin DLL, flow JSON format, essential scripts
+- **Gate blocking rule** — Hard Rule #8: gate failures block advancement, route to responsible agent
+- **5 new skills** — plugin-deploy-cycle, privilege-depth, schema-api, screen-layout, mcp-prompt-patterns
+- **3 updated skills** — security-patterns (flat-BU), orchestration (gate routing), parallel-agents (VS Code caveat)
+- **Output contracts** — All agents write structured fields to plan-index.json
+- **Windows compatibility** — install.js uses `where` on Windows (not `which`)
+- **MCP detection** — install.js checks for Dataverse MCP global tool
 
 ### Future
 - Claude Code `Task` tool parallelism (true isolated subagents)
 - `/relay:learn` — cross-project pattern extraction from execution logs
 - Web dashboard for execution-log.jsonl + plan-index.json visualization
 - Playwright test agents (autonomous test execution + self-healing)
-
----
-
-## Roadmap
-
-### v0.4.0 (current)
-- /fleet parallel execution for Copilot CLI (Phase 3, 5a, 5b, 6, audit, change, visualise)
-- Playwright E2E testing via `power-platform-playwright-toolkit` + Playwright MCP
-- Sentinel generates TypeScript tests from requirements, Page Objects from plan
-- Phase 6 runs Playwright tests alongside drift detection and security tests
-- Canvas App design reading skill (analyze any screenshot)
-- Enterprise layout as named reference pattern (not default)
-
-### Future
-- Claude Code `Task` tool parallelism (same concept as /fleet for Claude)
-- `/relay:learn` — promotes patterns from completed projects into skills
-- Web dashboard — visual project status from execution-log.jsonl
 - Playwright test agents — long-running AI processes that execute and fix tests autonomously
 
 ---

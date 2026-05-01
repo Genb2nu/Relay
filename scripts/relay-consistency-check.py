@@ -41,7 +41,7 @@ def log_event(event, details=None):
 def read(path):
     if not os.path.exists(path):
         return ""
-    return open(path).read().lower()
+    return open(path, encoding="utf-8", errors="replace").read().lower()
 
 
 def check_consistency(pi):

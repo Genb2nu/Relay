@@ -78,3 +78,27 @@ Categories: COMPLETENESS, CLARITY, TECHNICAL, MISSING
 - Don't propose solutions — state the gap. Drafter decides how to fix it.
 - If you find zero issues, say so clearly with `Status: approved`. Don't invent problems.
 - You may use WebSearch to verify Power Platform API signatures, PAC CLI syntax, or Dataverse column types if you're unsure.
+
+## plan-index.json Output Contract (MANDATORY)
+
+After completing your review, Conductor writes these values to `.relay/plan-index.json`:
+
+```json
+{
+  "phase_gates": {
+    "phase3_review": {
+      "auditor_approved": true,
+      "auditor_issues_found": 0,
+      "auditor_issues_resolved": 0,
+      "validated_at": "<ISO 8601 timestamp>"
+    }
+  }
+}
+```
+
+- `auditor_approved`: `true` only if Status = approved; `false` if issues remain
+- `auditor_issues_found`: total count of items across all severities
+- `auditor_issues_resolved`: count resolved in this cycle (starts at 0, increases on re-review)
+- `validated_at`: timestamp of this review pass
+
+Include these values in your handoff so Conductor can write them.

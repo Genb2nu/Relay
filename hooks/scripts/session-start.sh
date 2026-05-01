@@ -5,18 +5,35 @@
 
 set -e
 
-# --- Check required tools ---
-MISSING=""
+# --- Run prerequisite check (lightweight) ---
+# Find the relay-prerequisite-check.py script
+PREREQ_SCRIPT=""
+if [ -f "scripts/relay-prerequisite-check.py" ]; then
+  PREREQ_SCRIPT="scripts/relay-prerequisite-check.py"
+elif [ -f "../scripts/relay-prerequisite-check.py" ]; then
+  PREREQ_SCRIPT="../scripts/relay-prerequisite-check.py"
+elif [ -f "../../scripts/relay-prerequisite-check.py" ]; then
+  PREREQ_SCRIPT="../../scripts/relay-prerequisite-check.py"
+fi
 
-command -v pac >/dev/null 2>&1 || MISSING="$MISSING pac"
-command -v az >/dev/null 2>&1 || MISSING="$MISSING az"
-command -v jq >/dev/null 2>&1 || MISSING="$MISSING jq"
-command -v node >/dev/null 2>&1 || MISSING="$MISSING node"
-command -v git >/dev/null 2>&1 || MISSING="$MISSING git"
+if [ -n "$PREREQ_SCRIPT" ] && command -v python3 >/dev/null 2>&1; then
+  PYTHONUTF8=1 python3 "$PREREQ_SCRIPT" --skip-plugins --skip-mcp 2>&1 || true
+elif [ -n "$PREREQ_SCRIPT" ] && command -v python >/dev/null 2>&1; then
+  PYTHONUTF8=1 python "$PREREQ_SCRIPT" --skip-plugins --skip-mcp 2>&1 || true
+else
+  # Fall back to legacy checks
+  MISSING=""
 
-if [ -n "$MISSING" ]; then
-  echo "[Relay] Warning: Missing tools:$MISSING" >&2
-  echo "[Relay] Some agents may not work correctly without these tools." >&2
+  command -v pac >/dev/null 2>&1 || MISSING="$MISSING pac"
+  command -v az >/dev/null 2>&1 || MISSING="$MISSING az"
+  command -v jq >/dev/null 2>&1 || MISSING="$MISSING jq"
+  command -v node >/dev/null 2>&1 || MISSING="$MISSING node"
+  command -v git >/dev/null 2>&1 || MISSING="$MISSING git"
+
+  if [ -n "$MISSING" ]; then
+    echo "[Relay] Warning: Missing tools:$MISSING" >&2
+    echo "[Relay] Some agents may not work correctly without these tools." >&2
+  fi
 fi
 
 # --- Check PAC auth ---
@@ -29,7 +46,7 @@ fi
 
 # --- Rehydrate state ---
 if [ -f ".relay/state.json" ]; then
-  PROJECT=$(jq -r '.project_name // "unnamed"' .relay/state.json 2>/dev/null)
+  PROJECT=$(jq -r '.project_name // .project // "unnamed"' .relay/state.json 2>/dev/null)
   PHASE=$(jq -r '.phase // "unknown"' .relay/state.json 2>/dev/null)
   echo "[Relay] Project: $PROJECT | Phase: $PHASE" >&2
 else

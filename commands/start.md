@@ -9,9 +9,38 @@ trigger_keywords:
 
 # /relay:start
 
-## Step 0 — Initialise project files (FIRST — before anything else)
+## Step 0a — Prerequisite Check (FIRST — before anything else)
 
-Before invoking Scout or asking any questions, run these commands:
+Before creating any files or asking any questions, run the prerequisite check:
+
+```powershell
+$env:PYTHONUTF8 = "1"
+python scripts/relay-prerequisite-check.py
+```
+
+If the script is not found (running from a project folder), try the plugin root:
+```powershell
+python "$PSScriptRoot/../scripts/relay-prerequisite-check.py"
+# Or if Relay is installed as a Copilot plugin, find it:
+# python (Get-ChildItem -Recurse -Filter relay-prerequisite-check.py -Path $env:USERPROFILE/.copilot 2>$null | Select -First 1).FullName
+```
+
+**If the gate returns exit code 1 (critical failures):**
+- Show the user the full output
+- Do NOT proceed to scaffolding
+- Offer to run with `--fix` to attempt auto-remediation:
+  ```powershell
+  python scripts/relay-prerequisite-check.py --fix
+  ```
+- After fixes, re-run the check. Only proceed when gate returns exit 0.
+
+**If the gate returns exit code 0 (all critical checks pass):**
+- Show the summary to the user (especially any non-critical warnings)
+- Proceed to Step 0b
+
+## Step 0b — Initialise project files
+
+After prerequisites pass, run these commands:
 
 ```powershell
 # Create .relay/ folder
