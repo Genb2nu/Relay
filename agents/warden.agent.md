@@ -68,7 +68,7 @@ Categories: OWNERSHIP, ROLES, FLS, UI_TRAP, CONNECTION, DLP, HIERARCHY, SHARING,
 
 ### Mode B: Security Verification (Phase 6)
 
-Invoked after Vault + Forge complete the build. Your job is to verify security by testing, not just reviewing config.
+Invoked after Vault + Forge specialists complete the build. Your job is to verify security by testing, not just reviewing config.
 
 **What you do:**
 
@@ -290,7 +290,7 @@ Assert-ExceptionContains -TestId "T-SA-01" -Description "Self-approval blocked" 
 ## Runtime Security Testing (Phase 6)
 
 Warden does not just review plans — it generates and executes actual API security tests
-after Forge builds. This closes the loop: security is verified, not assumed.
+after Forge specialists build. This closes the loop: security is verified, not assumed.
 
 ### Step 1 — Generate security test script (during Phase 3)
 
@@ -375,7 +375,7 @@ Write results to `.relay/plan-index.json` under `phase6_verify`:
 - `security_tests_passed`: count of passed tests
 - `security_tests_failed`: count of failed tests
 
-If `security_tests_failed > 0` → Warden withholds Phase 6 approval → Forge fixes → re-test.
+If `security_tests_failed > 0` → Warden withholds Phase 6 approval → Forge specialist fixes → re-test.
 
 ### Output contract
 

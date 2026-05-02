@@ -26,7 +26,7 @@ Adapted from Superpowers subagent-driven-development for Power Platform multi-ag
 ## Core Principle
 
 Conductor coordinates — it does not implement.
-Each specialist (Scout, Drafter, Auditor, Warden, Critic, Vault, Forge, Sentinel)
+Each specialist (Scout, Drafter, Auditor, Warden, Critic, Vault, Forge specialists, Sentinel)
 has a defined scope. Conductor's job is to:
 1. Read the state
 2. Dispatch the right agent with the right context
@@ -76,7 +76,12 @@ Phase 3 — Review       → gate: Auditor AND Warden both approve (loop until b
 Phase 4 — Adversarial  → gate: Critic 18/18 checklist pass
                          ↓ PLAN LOCKED (SHA256 checksums computed)
 Phase 5 — Build        → gate: Vault completes schema, Stylist completes design-system.md
-                         then Forge builds apps, flows, assignments
+                         then Forge specialists build apps, flows, assignments:
+                           forge-canvas → Canvas App screens
+                           forge-mda    → Model-Driven App sitemap + forms
+                           forge-flow   → Flow build guides
+                           forge-pages  → Power Pages portals
+                           forge        → Plugins, code apps, web resources, env vars
 Phase 6 — Verify       → gate: Sentinel AND Warden both pass (loop until both pass)
 Phase 7 — Ship         → summary to user + export command
 ```
@@ -180,15 +185,15 @@ When `python scripts/relay-gate-check.py --phase N` exits 1:
 | "Warden has not approved" | Warden (re-review) |
 | "Critic has not approved" | Critic (re-review) |
 | "Vault has not completed" | Vault (fix schema) |
-| "Forge has not completed" | Forge (fix build) |
-| "Sentinel verification not passed" | Sentinel → identify failure → route to Forge |
-| "security tests failed" | Forge/Vault fix → Warden re-test |
-| "drift detected" | Forge (fix missing components) |
+| "Forge has not completed" | Forge specialist (fix build) |
+| "Sentinel verification not passed" | Sentinel → identify failure → route to Forge specialist |
+| "security tests failed" | Forge specialist/Vault fix → Warden re-test |
+| "drift detected" | Forge specialist (fix missing components) |
 | "inconsistent with docs" | Drafter (update plan or fix plan-index) |
 | "DECISION NEEDED" | Ask user |
 | "Required script missing" | Forge (generate the script) |
 | "no .dll found" | Forge (compile plugin) |
-| "ARM-shaped" | Forge (regenerate flow in Dataverse format) |
+| "ARM-shaped" | forge-flow (regenerate in Dataverse format) |
 | "canvas_app_bootstrapped" | Print Canvas bootstrap checklist to user |
 
 **Maximum retries:** If the same gate error persists after 3 fix attempts,
@@ -210,7 +215,7 @@ agent continues running (or remains stuck).
 3. **If no notification after 30 minutes**, assume failure and re-launch with smaller scope:
    - Drafter: "Write only sections 1-6 of plan.md" → then "Write sections 7-12"
    - Vault: "Write tables 1-8 to create-schema-part1.ps1" → then "Write tables 9-16"
-   - Forge: Split by component type — one call per app/flow/script
+   - Forge specialists: Split by component type — one specialist per app/flow/script
 4. **Log the timeout** in execution-log.jsonl as `event: "agent_timeout"`
 
 **Root cause:** Large file output + high token-density code = context window exhaustion.

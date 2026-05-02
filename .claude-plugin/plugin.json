@@ -1,7 +1,7 @@
 {
   "name": "relay",
-  "version": "0.5.2",
-  "description": "AI squad for Power Platform development \u2014 8 specialist subagents with workflow gates, security-first design, and dual-target support (Claude Code + GitHub Copilot CLI)",
+  "version": "0.6.0",
+  "description": "AI squad for Power Platform development \u2014 specialist subagents with workflow gates, security-first design, and dual-target support (Claude Code + GitHub Copilot CLI)",
   "author": {
     "name": "Gen",
     "url": "https://github.com/Genb2nu"

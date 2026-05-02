@@ -76,7 +76,7 @@ When the user invokes this command:
    | | | |
 
    ## Regression risk assessment
-   - Changing <X>: could affect <Y> because <reason>. Mitigation: <how Forge avoids it>
+   - Changing <X>: could affect <Y> because <reason>. Mitigation: <how Forge specialist avoids it>
 
    ## Rollback plan
    <How to undo this change if it breaks something>
@@ -93,8 +93,8 @@ When the user invokes this command:
    - Missing regression test coverage
    - Flow trigger conflicts (does the change cause a flow to fire unexpectedly?)
 
-   **Phase: Build (Vault + Forge)**
-   Vault and Forge operate ONLY within the change-plan scope.
+   **Phase: Build (Vault + Forge specialists)**
+   Vault and Forge specialists operate ONLY within the change-plan scope.
    Any deviation from the scope is flagged to Conductor before proceeding.
 
    **Phase: Verification (Sentinel + Warden)**

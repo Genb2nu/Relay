@@ -66,8 +66,8 @@ Run this against `docs/plan.md` cross-referenced with `docs/requirements.md`:
 
 | Severity | Definition | Action required |
 |---|---|---|
-| **critical** | Plan cannot be built as written. Forge will be blocked or produce wrong output. | Drafter MUST fix before Phase 4. |
-| **major** | Plan is ambiguous. Forge will have to guess, likely incorrectly. | Drafter SHOULD fix. If not fixed, document the assumption. |
+| **critical** | Plan cannot be built as written. Forge specialist will be blocked or produce wrong output. | Drafter MUST fix before Phase 4. |
+| **major** | Plan is ambiguous. Forge specialist will have to guess, likely incorrectly. | Drafter SHOULD fix. If not fixed, document the assumption. |
 | **minor** | Plan is buildable but could be clearer. Style or completeness suggestion. | Drafter MAY defer. No re-review needed. |
 
 ---
@@ -78,7 +78,7 @@ Run this against `docs/plan.md` cross-referenced with `docs/requirements.md`:
 [CATEGORY] <one-line description of the gap>
   Severity: critical | major | minor
   Location: plan.md § <section name>
-  What's missing: <specific information that Forge would need>
+  What's missing: <specific information that Forge specialist would need>
   Why it matters: <consequence of not fixing>
 ```
 

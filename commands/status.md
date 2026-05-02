@@ -36,7 +36,7 @@ Project: <name> | Solution: <solution> | Environment: <env>
 ✅ Phase 3 — Review        (Auditor ✅ Warden ✅ | issues: <N> found, <N> resolved)
 ✅ Phase 4 — Adversarial   (Critic ✅ | checklist: <N>/<N> | LOCKED ✅)
 🔵 Phase 5 — Build         (in progress)
-   Vault: ✅ | Stylist: ✅ | Forge: 🔵
+   Vault: ✅ | Stylist: ✅ | Forge specialists: 🔵
    Built: <N> tables, <N> flows, <N> apps
    Partial: <list>
    Blocked: <list>

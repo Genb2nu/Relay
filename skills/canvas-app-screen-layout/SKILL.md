@@ -3,7 +3,7 @@ name: canvas-app-screen-layout
 description: |
   Six standard screen layout archetypes for Canvas Apps with exact zone
   dimensions, responsive formulas, and ASCII zone diagrams. Stylist references
-  this when assigning layouts to screens. Forge references this when
+  this when assigning layouts to screens. forge-canvas references this when
   positioning controls.
 trigger_keywords:
   - screen layout
@@ -21,7 +21,7 @@ allowed_tools:
 # Canvas App Screen Layout Archetypes
 
 Use these archetypes when designing Canvas App screen layouts. Each defines named zones
-with exact pixel positions. Stylist selects the archetype per screen; Forge positions
+with exact pixel positions. Stylist selects the archetype per screen; forge-canvas positions
 controls within the zones.
 
 ---
@@ -272,7 +272,7 @@ X: Parent.Width - ButtonWidth - SpaceMD
 
 ## Standard Improvements Checklist
 
-Every screen should include these UX patterns (remind Forge if missing):
+Every screen should include these UX patterns (remind forge-canvas if missing):
 
 | Pattern | When | Control |
 |---|---|---|

@@ -21,7 +21,7 @@ allowed_tools:
 
 ## Overview
 
-Relay is an AI squad for Power Platform development. Eight specialist subagents
+Relay is an AI squad for Power Platform development. Specialist subagents
 collaborate through a structured workflow with quality gates at every handoff.
 
 ## Phases
@@ -55,7 +55,12 @@ collaborate through a structured workflow with quality gates at every handoff.
 - **LOCK**: After all three approve, checksum plan.md and security-design.md
 
 ### Phase 5 — Build
-- **Agents**: Vault (schema) + Forge (apps/flows/code)
+- **Agents**: Vault (schema) + Stylist (design) + Forge specialists (apps/flows/code)
+  - forge-canvas → Canvas App screens
+  - forge-mda → Model-Driven App sitemap + forms
+  - forge-flow → Flow build guides (temporary — automation planned v0.6.x)
+  - forge-pages → Power Pages portals
+  - forge → Plugins, code apps, web resources, env vars
 - **Input**: Locked `docs/plan.md`, `docs/security-design.md`
 - **Output**: Dataverse schema, apps, flows, code in `src/`
 - **Warden on-call**: Available for security questions during build
@@ -65,7 +70,7 @@ collaborate through a structured workflow with quality gates at every handoff.
 - **Input**: Built solution + locked plan + locked security design
 - **Output**: `docs/test-report.md`, `docs/security-test-report.md`
 - **Gate**: Both return passed status
-- **Loop**: If issues → Forge/Vault fix → re-verify
+- **Loop**: If issues → Forge specialist/Vault fix → re-verify
 - **On-demand**: Critic can be invoked if material issues suggest plan was wrong
 
 ### Phase 7 — Deploy

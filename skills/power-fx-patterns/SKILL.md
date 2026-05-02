@@ -24,7 +24,7 @@ allowed_tools:
 
 > **Publisher prefix**: All examples below use `<prefix>_` as a placeholder.
 > Replace with the actual prefix from `.relay/state.json` (e.g. `cr`, `swo`, `con`).
-> Forge reads the prefix from state.json — never hardcode `cr_` in generated code.
+> forge-canvas reads the prefix from state.json — never hardcode `cr_` in generated code.
 
 ## Current User — Filtering Dataverse Lookups
 

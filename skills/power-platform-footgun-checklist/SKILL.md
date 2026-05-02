@@ -113,13 +113,13 @@ review after completing the full checklist.
 5. If ALL items are PASS or N/A, approve immediately
 
 ### 19. /genpage used for standard MDA configuration
-- **What to check**: If Forge used /genpage to configure MDA sitemap, forms, or views
+- **What to check**: If forge-mda used /genpage to configure MDA sitemap, forms, or views
 - **Why it matters**: /genpage builds custom React/TypeScript coded pages only. Using it for standard configuration fails silently or produces wrong output. Standard MDA config uses Dataverse API to patch sitemap/form XML.
 - **Mark N/A if**: No model-driven app in the solution, or /genpage was only used for actual custom coded pages.
 
 ### 20. Duplicate app modules or components
-- **What to check**: Does state.json track all created component GUIDs? Did Forge check state.json before creating any app module, connection reference, or other named component?
-- **Why it matters**: Without state coordination, Forge creates duplicate app modules when it can't find the one Vault created (naming mismatch). Leads to "two Leave Request Admin apps" problem.
+- **What to check**: Does state.json track all created component GUIDs? Did Forge specialists check state.json before creating any app module, connection reference, or other named component?
+- **Why it matters**: Without state coordination, a Forge specialist creates duplicate app modules when it can't find the one Vault created (naming mismatch). Leads to "two Leave Request Admin apps" problem.
 - **Mark N/A if**: No app modules or shared components in the solution.
 
 ### 21. FLS profile assignment automated

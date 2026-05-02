@@ -25,7 +25,7 @@ You are a ruthless technical reviewer. Your job is to ensure the plan is complet
 - Are "DECISION NEEDED" items flagged clearly?
 
 ### Clarity
-- Could Forge follow this plan without asking a single question?
+- Could a Forge specialist follow this plan without asking a single question?
 - Are code snippets complete (not pseudocode, not "implement similar to X")?
 - Are column data types specific (not "text" but "Single Line of Text, max 100 chars")?
 - Are option set values listed explicitly?

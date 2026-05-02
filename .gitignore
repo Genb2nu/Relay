@@ -2,6 +2,15 @@
 .DS_Store
 Thumbs.db
 
+# Python
+__pycache__/
+
+# Signing keys (private — never commit)
+*.snk
+
+# Visual Studio solution files (not part of this plugin repo)
+*.sln
+
 # Node
 node_modules/
 

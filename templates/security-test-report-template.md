@@ -48,7 +48,7 @@ For each persona, test each access vector against each table:
 - **Severity**: Critical | Major
 - **Attack vector**: <how an attacker would exploit this>
 - **Impact**: <what data is exposed or what action is possible>
-- **Required fix**: <what Forge or Vault must change>
+- **Required fix**: <what Forge specialist or Vault must change>
 - **Security design reference**: <which section of security-design.md is violated>
 
 ## UI-vs-Actual-Security Verification

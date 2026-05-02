@@ -4,7 +4,7 @@ A plugin-native SDLC orchestration system for Microsoft Power Platform. Ten spec
 
 Works on **Claude Code**, **GitHub Copilot CLI**, and **Copilot in VS Code**.
 
-> **v0.5.2** — Security hardening · state schema validation · hook regression harness · prerequisite alignment
+> **v0.6.0** — Forge specialist split · /relay:learn · /relay:doctor full implementation · CHANGELOG.md
 
 ---
 
@@ -22,7 +22,11 @@ You describe what you want to build. Relay runs a squad of specialists through a
 | UI Designer | **Stylist** | Canvas App design system — RGBA tokens, typography, spacing |
 | Solution Mapper | **Analyst** | Maps existing solutions before change requests or audits |
 | Dataverse Engineer | **Vault** | Tables, columns, security roles, FLS profiles, plugins |
-| Developer | **Forge** | Canvas Apps, MDA, Power Automate flows, code apps |
+| Canvas App Developer | **Forge-Canvas** | Canvas App screens via Canvas Authoring MCP |
+| MDA Developer | **Forge-MDA** | Model-Driven App sitemap, forms, views |
+| Flow Developer | **Forge-Flow** | Power Automate flow build guides |
+| Power Pages Developer | **Forge-Pages** | Power Pages portals via /create-site |
+| Developer | **Forge** | Plugins, code apps, web resources, env vars |
 | Tester | **Sentinel** | Functional verification + drift detection (plan vs actual build) |
 
 **Workflow:** discovery → planning → review → adversarial → build → verify → complete
@@ -52,12 +56,12 @@ Every phase transition is gate-validated. The plan locks with SHA256 checksums a
 /plugin install code-apps-preview@power-platform-skills
 ```
 
-| Plugin | Forge uses it for |
+| Plugin | Used by |
 |---|---|
-| `canvas-apps` | `/configure-canvas-mcp`, `/generate-canvas-app`, `/edit-canvas-app` |
-| `model-apps` | `/genpage` — custom React pages in Model-Driven Apps |
-| `power-pages` | `/create-site` — Power Pages portals |
-| `code-apps-preview` | `/create-code-app`, `/add-dataverse`, `/add-office365`, `/deploy` |
+| `canvas-apps` | forge-canvas: `/configure-canvas-mcp`, `/generate-canvas-app`, `/edit-canvas-app` |
+| `model-apps` | forge-mda: `/genpage` — custom React pages in Model-Driven Apps |
+| `power-pages` | forge-pages: `/create-site` — Power Pages portals |
+| `code-apps-preview` | forge: `/create-code-app`, `/add-dataverse`, `/add-office365`, `/deploy` |
 
 > **No Superpowers needed.** All orchestration, discovery, planning, verification, and debugging skills are embedded in Relay.
 

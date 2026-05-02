@@ -144,7 +144,7 @@ Include these values in your handoff so Conductor can write them to `.relay/plan
 ```
 
 - `vault_complete`: `true` only when ALL planned tables, roles, and FLS profiles exist
-- `components`: GUIDs for every created component — Forge reads this to avoid duplicates
+- `components`: GUIDs for every created component — Forge specialists read this to avoid duplicates
 
 ---
 
@@ -241,7 +241,7 @@ $body = @{
 Invoke-RestMethod -Method POST -Uri "$orgUrl/api/data/v9.2/systemuserprofiles" -Headers $h -Body $body -ContentType "application/json"
 ```
 
-## State Coordination with Forge
+## State Coordination with Forge Specialists
 
 Write all created component IDs to `state.json` under `"components"`:
 ```json
@@ -255,7 +255,7 @@ Write all created component IDs to `state.json` under `"components"`:
 }
 ```
 
-Forge reads this to find existing components instead of creating duplicates.
+Forge specialists read this to find existing components instead of creating duplicates.
 This prevents the "two Leave Request Admin apps" problem observed in the pilot.
 
 ---

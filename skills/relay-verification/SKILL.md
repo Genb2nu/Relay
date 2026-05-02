@@ -117,7 +117,7 @@ Never verify by memory. Always verify by evidence.
 
 ## Partial Build Handling
 
-If Forge/Vault marked components as PARTIAL or BLOCKED:
+If Forge specialist/Vault marked components as PARTIAL or BLOCKED:
 - Document what was not built and the stated reason
 - Verify the stated reason is accurate (not a workaround)
 - Note it in the verification report — don't fail the build for genuinely

@@ -11,7 +11,7 @@ trigger_keywords:
 
 When the user invokes this command with an agent name:
 
-1. Validate the agent name is one of: `scout`, `drafter`, `auditor`, `warden`, `critic`, `vault`, `forge`, `sentinel`.
+1. Validate the agent name is one of: `scout`, `drafter`, `auditor`, `warden`, `critic`, `vault`, `forge`, `forge-canvas`, `forge-mda`, `forge-flow`, `forge-pages`, `sentinel`.
 
 2. Invoke the specified agent as a subagent with the user's follow-up question.
 

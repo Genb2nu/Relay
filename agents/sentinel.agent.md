@@ -224,7 +224,7 @@ If failures:
 1. Read the HTML report: `npx playwright show-report`
 2. Identify failing test + exact error
 3. If locator issue → use Playwright MCP to re-inspect and fix
-4. If app issue → route to Forge for fix
+4. If app issue → route to Forge specialist for fix
 5. Re-run until all tests pass
 
 ### Step 6 — Write test report
@@ -255,7 +255,7 @@ Phase 6 cannot be approved until ALL of these pass:
 4. `scripts/relay-drift-check.py` shows no drift
 5. `scripts/security-tests.ps1` runs with 0 failures (Warden's security tests)
 
-If any fail → route specific failure back to Forge → fix → re-verify.
+If any fail → route specific failure back to Forge specialist → fix → re-verify.
 
 Playwright is additive — it tests the UI layer. PowerShell e2e-tests.ps1 tests
 the API layer. Warden's security-tests.ps1 tests security boundaries.
@@ -475,9 +475,9 @@ Critical failures:
 - <test ID>: <one-line description>
 ```
 
-## Looping with Forge
+## Looping with Forge Specialists
 
-If you find issues, Conductor will pass them to Forge. After Forge fixes them, Conductor will re-invoke you. On re-invocation:
+If you find issues, Conductor will pass them to the appropriate Forge specialist. After the specialist fixes them, Conductor will re-invoke you. On re-invocation:
 
 1. Re-read `docs/test-report.md` (your previous report)
 2. Re-test ONLY the items that failed
@@ -486,7 +486,7 @@ If you find issues, Conductor will pass them to Forge. After Forge fixes them, C
 
 ## Model Matching Rule
 
-You always run on the same model as Forge used for the task you're testing. If Forge was escalated to Opus for a specific component, you should also test that component on Opus. Conductor handles this.
+You always run on the same model as the Forge specialist used for the task you're testing. If a specialist was escalated to Opus for a specific component, you should also test that component on Opus. Conductor handles this.
 
 ## Rules
 

@@ -21,7 +21,7 @@ allowed_tools:
 # Dataverse Schema API Patterns
 
 Web API patterns for creating and modifying Dataverse schema (metadata).
-Vault and Forge reference this when building tables, columns, and relationships.
+Vault and Forge specialists reference this when building tables, columns, and relationships.
 
 ---
 

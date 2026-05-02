@@ -41,6 +41,6 @@ When the user invokes this command:
    - `planning` → "Drafter is writing the technical plan"
    - `plan_review` → "Auditor + Warden are reviewing the plan"
    - `adversarial_pass` → "Critic is red-teaming the approved plan"
-   - `building` → "Vault + Forge are building the solution"
+   - `building` → "Vault + Forge specialists are building the solution"
    - `verification` → "Sentinel + Warden are verifying the build"
    - `complete` → "Project complete"

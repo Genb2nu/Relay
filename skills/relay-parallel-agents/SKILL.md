@@ -27,7 +27,7 @@ Adapted from Superpowers dispatching-parallel-agents for Power Platform review w
 | Phase | Agents | Both must pass |
 |---|---|---|
 | Phase 3 — Review | Auditor + Warden | Yes — both must approve plan |
-| Phase 5 — Build | Vault + Stylist | Yes — both outputs needed before Forge |
+| Phase 5 — Build | Vault + Stylist | Yes — both outputs needed before Forge specialists |
 | Phase 6 — Verify | Sentinel + Warden | Yes — both must pass before ship |
 
 ## Core Principle
@@ -82,11 +82,11 @@ These are parallel BUILD tasks, not reviews. Both produce outputs Forge needs.
 **Stylist produces:**
 - docs/design-system.md (colours, typography, spacing, component patterns)
 
-**Forge waits for both** before starting Canvas App build.
-Forge reads design-system.md to inform /generate-canvas-app prompt.
-Forge reads state.json to find Vault's component GUIDs before creating anything.
+**Forge specialists wait for both** before starting builds.
+forge-canvas reads design-system.md to inform /generate-canvas-app prompt.
+All Forge specialists read state.json to find Vault's component GUIDs before creating anything.
 
-**If Stylist is unavailable:** Forge proceeds with default design tokens but
+**If Stylist is unavailable:** forge-canvas proceeds with default design tokens but
 flags Canvas App as needing visual review.
 
 ## Phase 6 — Sentinel + Warden Parallel Verify
@@ -95,7 +95,7 @@ Both verify the completed build from different angles.
 
 **Dispatch Sentinel with:**
 - docs/plan.md (the approved spec)
-- List of all components built (from Forge/Vault handoffs)
+- List of all components built (from Forge specialist/Vault handoffs)
 - Verification persona rules
 
 Sentinel checks: does what was built match what was planned?
@@ -109,7 +109,7 @@ Warden checks: are the security controls actually in place in the built solution
 
 **After both complete:**
 - If both pass → proceed to Phase 7 (wrap-up + export)
-- If either fails → Forge/Vault fix the specific failures → re-verify
+- If either fails → Forge specialist/Vault fix the specific failures → re-verify
 - Loop until both pass
 
 ## Context Isolation

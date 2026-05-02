@@ -91,8 +91,8 @@ When the user invokes this command:
    Warden checks the fix doesn't introduce a security gap.
    Auditor is skipped — fixes are minimal and don't warrant full plan review.
 
-   **Phase: Fix (Forge or Vault as needed)**
-   Forge/Vault implement ONLY what `docs/fix-plan.md` specifies.
+   **Phase: Fix (Forge specialist or Vault as needed)**
+   Forge specialist/Vault implement ONLY what `docs/fix-plan.md` specifies.
    Any temptation to "improve things while we're in here" is rejected.
 
    **Phase: Verify (Sentinel)**

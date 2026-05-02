@@ -16,7 +16,7 @@ When the user invokes this command:
 
 3. Warden writes results to `docs/security-test-report.md` and returns summary.
 
-4. If issues found, ask the user whether to route fixes to Forge/Vault or to defer.
+4. If issues found, ask the user whether to route fixes to Forge specialist/Vault or to defer.
 
 Use this when:
 - You want to spot-check security mid-build
