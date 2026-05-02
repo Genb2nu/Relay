@@ -121,18 +121,18 @@ Create one custom security role per persona identified in requirements. Never re
 
 ```
 Role: Employee
-  - TrainingRequest: Create(User), Read(User), Write(User), Delete(None)
-  - Course: Read(Org), no create/write/delete
-  - ApprovalRecord: Read(User), no create/write/delete
+  - <MainTable>: Create(User), Read(User), Write(User), Delete(None)
+  - <ReferenceTable>: Read(Org), no create/write/delete
+  - <ApprovalTable>: Read(User), no create/write/delete
 
 Role: Manager
-  - TrainingRequest: Read(BU), Write(BU) — can see/edit requests from their BU
-  - ApprovalRecord: Create(User), Read(BU), Write(User)
+  - <MainTable>: Read(BU), Write(BU) — can see/edit records from their BU
+  - <ApprovalTable>: Create(User), Read(BU), Write(User)
 
 Role: L&D Admin
-  - TrainingRequest: Read(Org), Write(Org)
-  - ApprovalRecord: Read(Org), Write(Org)
-  - Course: Create(Org), Read(Org), Write(Org), Delete(Org)
+  - <MainTable>: Read(Org), Write(Org)
+  - <ApprovalTable>: Read(Org), Write(Org)
+  - <ReferenceTable>: Create(Org), Read(Org), Write(Org), Delete(Org)
 ```
 
 ### Pattern: Minimum Privilege Start

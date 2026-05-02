@@ -4,6 +4,17 @@ All notable changes to Relay are documented here.
 
 ---
 
+## [0.6.2] — 2026-05-XX
+
+### Docs
+- Generic plugin guidance now uses neutral placeholders for app names, entity names, roles, prefixes, and environment examples
+- Agent, skill, and command examples were normalized to avoid project-specific naming residue in reusable plugin content
+
+### Release
+- Release metadata bumped to 0.6.2
+
+---
+
 ## [0.6.1] — 2026-05-XX
 
 ### Critical Fixes

@@ -30,12 +30,12 @@ You are **Conductor**, the orchestrator of the Relay squad. Your job is to route
 ```
 Phase 0 — SCAFFOLD
   Ask the user for these three values before anything else:
-  1. Publisher prefix (e.g. "cr", "swo", "dev", "contoso") — 2-8 lowercase letters
-  2. Publisher display name (e.g. "CR Solutions", "SWO Internal")
-  3. Environment URL (e.g. "https://org76e4780e.crm5.dynamics.com")
+  1. Publisher prefix (e.g. "cr", "ops", "dev", "contoso") — 2-8 lowercase letters
+  2. Publisher display name (e.g. "CR Solutions", "Ops Internal")
+  3. Environment URL (e.g. "https://<your-org>.crm5.dynamics.com")
 
   If the user says they don't know the prefix, suggest: use 2-3 letters from
-  the client or project name. Example: Contoso project → "con", SWO → "swo".
+  the client or project name. Example: Contoso project → "con", Ops project → "ops".
 
   Store in .relay/state.json:
   {
@@ -413,15 +413,15 @@ connection reference logical names. Never assume `cr_`.
 JavaScript namespaces, and web resource names.
 
 **Drafter**: Use `<prefix>_` as a placeholder in plan.md — fill the actual prefix
-from state.json when writing component names. Example: `<prefix>_leaverequest`.
+from state.json when writing component names. Example: `<prefix>_<entity>`.
 
 **Naming convention**: `{prefix}_{entityname}` for tables, `{prefix}_{columnname}`
 for columns, `{prefix}_{solutionname}` for connection references.
 
 Examples by prefix:
-- prefix "cr" → `cr_leaverequest`, `cr_status`, `cr_DataverseConnection`
-- prefix "swo" → `swo_leaverequest`, `swo_status`, `swo_DataverseConnection`
-- prefix "con" → `con_leaverequest`, `con_status`, `con_DataverseConnection`
+- prefix "cr" → `cr_request`, `cr_status`, `cr_DataverseConnection`
+- prefix "ops" → `ops_request`, `ops_status`, `ops_DataverseConnection`
+- prefix "con" → `con_request`, `con_status`, `con_DataverseConnection`
 
 ---
 

@@ -23,7 +23,7 @@ allowed_tools:
 # Power Fx Patterns
 
 > **Publisher prefix**: All examples below use `<prefix>_` as a placeholder.
-> Replace with the actual prefix from `.relay/state.json` (e.g. `cr`, `swo`, `con`).
+> Replace with the actual prefix from `.relay/state.json` (e.g. `cr`, `ops`, `con`).
 > forge-canvas reads the prefix from state.json — never hardcode `cr_` in generated code.
 
 ## Current User — Filtering Dataverse Lookups
@@ -40,15 +40,15 @@ Use the Primary Email to match the current user against a systemuser lookup:
 ```powerfx
 // Filter a gallery to show only the current user's records
 Filter(
-    'Leave Requests',
-    Employee.'Primary Email' = User().Email
+    '<Main Table>',
+    '<User Lookup Column>'.'Primary Email' = User().Email
 )
 ```
 
 ```powerfx
 // Alternative: use Owner field if the table is user-owned
 Filter(
-    'Leave Requests',
+    '<Main Table>',
     Owner.User = User()
 )
 ```
@@ -71,19 +71,19 @@ Set(
 ### Delegable operations on Dataverse (safe for large tables)
 ```powerfx
 // Equality on indexed columns — delegable ✅
-Filter('Leave Requests', Status = 'Status (Leave Requests)'.Pending)
+Filter('<Main Table>', Status = 'Status (<Main Table>)'.Pending)
 
 // StartsWith on text columns — delegable ✅
-Filter('Leave Requests', StartsWith(RequestID, "LR-"))
+Filter('<Main Table>', StartsWith(RequestID, "REQ-"))
 
 // Lookup relationship filter — delegable ✅
-Filter('Leave Requests', Employee.'Primary Email' = User().Email)
+Filter('<Main Table>', '<User Lookup Column>'.'Primary Email' = User().Email)
 
 // Multiple conditions — delegable ✅
 Filter(
-    'Leave Requests',
-    Employee.'Primary Email' = User().Email &&
-    Status = 'Status (Leave Requests)'.Pending
+    '<Main Table>',
+    '<User Lookup Column>'.'Primary Email' = User().Email &&
+    Status = 'Status (<Main Table>)'.Pending
 )
 ```
 
@@ -93,21 +93,21 @@ Filter(
 Search('<Table>', TextInput.Text, "<prefix>_name")  // ⚠️
 
 // EndsWith() — non-delegable
-Filter('Leave Requests', EndsWith(RequestID, "2026"))  // ⚠️
+Filter('<Main Table>', EndsWith(RequestID, "2026"))  // ⚠️
 
 // Len(), Mid(), Left() on filter — non-delegable  // ⚠️
 
 // CountRows() on a table — non-delegable
-CountRows(Filter('Leave Requests', ...))  // ⚠️ Use CountIf() instead
+CountRows(Filter('<Main Table>', ...))  // ⚠️ Use CountIf() instead
 ```
 
 ### Safe pattern for search on large tables
 ```powerfx
 // Use StartsWith instead of Search where possible
 Filter(
-    'Leave Requests',
+    '<Main Table>',
     StartsWith(RequestID, SearchInput.Text) ||
-    Employee.'Primary Email' = User().Email
+    '<User Lookup Column>'.'Primary Email' = User().Email
 )
 ```
 
@@ -118,33 +118,33 @@ Filter(
 ### Create a new record
 ```powerfx
 Patch(
-    'Leave Requests',
-    Defaults('Leave Requests'),
+    '<Main Table>',
+    Defaults('<Main Table>'),
     {
-        'Leave Type': ddLeaveType.Selected,
-        Employee: varCurrentUser,
+        '<Category Lookup>': ddCategory.Selected,
+        '<User Lookup Column>': varCurrentUser,
         'Start Date': dpStartDate.SelectedDate,
         'End Date': dpEndDate.SelectedDate,
         'Number of Days': nDays,
-        Status: 'Status (Leave Requests)'.Pending,
+        Status: 'Status (<Main Table>)'.Pending,
         'Submitted On': Now()
     }
 );
-Notify("Leave request submitted successfully", NotificationType.Success);
+Notify("Request submitted successfully", NotificationType.Success);
 Navigate(scrMyRequests)
 ```
 
 ### Update an existing record
 ```powerfx
 Patch(
-    'Leave Requests',
+    '<Main Table>',
     galRequests.Selected,
     {
-        Status: 'Status (Leave Requests)'.Cancelled,
-        'Employee Comments': txtComments.Text
+        Status: 'Status (<Main Table>)'.Cancelled,
+        '<Comment Column>': txtComments.Text
     }
 );
-Refresh('Leave Requests')
+Refresh('<Main Table>')
 ```
 
 ### Patch with error handling
@@ -152,9 +152,9 @@ Refresh('Leave Requests')
 If(
     IsError(
         Patch(
-            'Leave Requests',
-            Defaults('Leave Requests'),
-            {Status: 'Status (Leave Requests)'.Pending}
+            '<Main Table>',
+            Defaults('<Main Table>'),
+            {Status: 'Status (<Main Table>)'.Pending}
         )
     ),
     Notify("Failed to submit request. Please try again.", NotificationType.Error),
@@ -170,10 +170,10 @@ If(
 ### Referencing a choice value in a filter
 ```powerfx
 // Use the fully qualified choice reference
-Filter('Leave Requests', Status = 'Status (Leave Requests)'.Pending)
+Filter('<Main Table>', Status = 'Status (<Main Table>)'.Pending)
 
 // Do NOT use the integer value directly — it breaks with label changes
-Filter('Leave Requests', Status = 1)  // ❌ fragile
+Filter('<Main Table>', Status = 1)  // ❌ fragile
 ```
 
 ### Displaying a choice label
@@ -183,10 +183,10 @@ Text(ThisItem.Status)
 
 // For conditional formatting
 If(
-    ThisItem.Status = 'Status (Leave Requests)'.Approved,
+    ThisItem.Status = 'Status (<Main Table>)'.Approved,
     RGBA(16, 185, 129, 1),  // green
     If(
-        ThisItem.Status = 'Status (Leave Requests)'.Rejected,
+        ThisItem.Status = 'Status (<Main Table>)'.Rejected,
         RGBA(239, 68, 68, 1),  // red
         RGBA(245, 158, 11, 1)  // amber (pending/other)
     )
@@ -197,22 +197,22 @@ If(
 
 ## Balance Calculation Pattern
 
-### Pattern for leave balance display
+### Pattern for balance display
 ```powerfx
-// Remaining days — always recalculate, never store as static
+// Remaining units — always recalculate, never store as static
 // <prefix>_remaining = <prefix>_entitled - <prefix>_used - <prefix>_pending
 
-// In a gallery showing leave types and balances
+// In a gallery showing categories and balances
 With(
     {
         balance: LookUp(
-            'Leave Balances',
-            Employee.'Primary Email' = User().Email &&
-            'Leave Type'.<prefix>_name = ThisItem.<prefix>_name &&
+            '<Balance Table>',
+            '<User Lookup Column>'.'Primary Email' = User().Email &&
+            '<Category Lookup>'.<prefix>_name = ThisItem.<prefix>_name &&
             Year = Year(Today())
         )
     },
-    balance.Remaining & " / " & balance.Entitled & " days"
+    balance.Remaining & " / " & balance.Entitled & " units"
 )
 ```
 

@@ -192,11 +192,11 @@ The schema is defined in `schemas/plan-index.schema.json`. When adding new track
 
 Plugin files (agents, skills, commands, CLAUDE.md, README.md) must never contain:
 
-- Real environment URLs (`org76e4780e.crm5.dynamics.com`)
-- Real solution names (`LeaveRequestSystem`)
+- Real environment URLs (`https://<your-org>.crm5.dynamics.com`)
+- Real solution names (`<SpecificSolutionName>`)
 - Real component GUIDs
 - Real user emails or tenant IDs
-- Hardcoded table names from specific projects (`cr_leaverequest`)
+- Hardcoded table names from specific projects (`<prefix>_<entity>`)
 
 Use generic placeholders: `<your-org>`, `<SolutionName>`, `<table_logical_name>`, `<guid>`.
 

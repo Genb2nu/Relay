@@ -164,7 +164,7 @@ import { AppProvider, AppType, AppLaunchMode } from 'power-platform-playwright-t
 
 const app = new AppProvider(page, context);
 await app.launch({
-  app: 'Training Request Admin',
+  app: '<MDAName>',
   type: AppType.ModelDriven,
   mode: AppLaunchMode.Play,
   directUrl: process.env.MODEL_DRIVEN_APP_URL!,

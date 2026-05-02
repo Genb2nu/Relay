@@ -167,7 +167,7 @@ import { test, expect } from '@playwright/test';
 import { AppProvider, AppType, AppLaunchMode } from 'power-platform-playwright-toolkit';
 import { MyCanvasAppPage } from '../pages/MyCanvasAppPage';
 
-test.describe('TC-001: Employee submits training request', () => {
+test.describe('TC-001: Employee submits a request', () => {
   test('should create a new request with all required fields', async ({ page, context }) => {
     const app = new AppProvider(page, context);
     await app.launch({

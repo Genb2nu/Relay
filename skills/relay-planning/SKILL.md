@@ -63,7 +63,7 @@ Map what goes in each. This is where decomposition gets locked in.
 
 For every entity:
 ```markdown
-### <prefix>_trainingrequest — Training Request  *(example — use your actual table name and prefix)*
+### <prefix>_<main_entity> — <Main Entity Display Name>  *(example — use your actual table name and prefix)*
 | Column | Logical Name | Type | Required | Notes |
 |---|---|---|---|---|
 | Request ID | <prefix>_name | Autonumber | Yes | Primary name |

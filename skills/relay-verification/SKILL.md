@@ -38,7 +38,7 @@ whether the plan was good.
 ✅ Right: "Ran get_data_source_schema — confirmed <prefix>_<maintable> connected.
           Ran compile_canvas — Validation passed, 5 files compile clean.
           Synced to Power Apps Studio — scrHome, scrNewRequest, 
-          scrMyRequests, scrLeaveBalance all visible in tree view. ✅"
+          scrMyRecords, scrSummary all visible in tree view. ✅"
 ```
 
 ## Verification Checklist (Sentinel runs this for every build)
@@ -108,7 +108,7 @@ pac env list-variables --environment <url>
 Read plan.md section by section. For each specified component:
 
 ```
-Plan says: "<prefix>_trainingrequest — 12 columns including <prefix>_requestdate (DateTime)"
+Plan says: "<prefix>_<main_entity> — 12 columns including <prefix>_requestdate (DateTime)"
 Evidence:  pac dataverse column list output shows <prefix>_requestdate, type DateTimeAttributeMetadata
 Result:    ✅ PASS
 ```
@@ -134,8 +134,8 @@ Verified: <date> | Environment: <org url>
 ## Schema
 | Component | Planned | Verified | Status |
 |---|---|---|---|
-| <prefix>_trainingrequest | 12 columns | 12 columns confirmed | ✅ PASS |
-| <prefix>_trainingcatalog | 6 columns | 6 columns confirmed | ✅ PASS |
+| <prefix>_<main_entity> | 12 columns | 12 columns confirmed | ✅ PASS |
+| <prefix>_<related_entity> | 6 columns | 6 columns confirmed | ✅ PASS |
 
 ## Security
 | Component | Status | Evidence |
@@ -150,7 +150,7 @@ Verified: <date> | Environment: <org url>
 ## Apps
 | App | Screens/Views | Compile | Status |
 |---|---|---|---|
-| Leave Request Portal | 4/4 screens | ✅ clean | ✅ PASS |
+| <CanvasAppName> | 4/4 screens | ✅ clean | ✅ PASS |
 
 ## Not Verified (acceptable reasons)
 | Item | Reason |

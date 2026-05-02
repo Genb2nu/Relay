@@ -57,7 +57,7 @@ with Fill=RGBA(37,99,235,1), Color=RGBA(255,255,255,1), BorderRadius=8
 ### Pattern: Gallery with row template
 ```
 Modern Gallery control named galRequests at X=0, Y=132, Width=400, Height=636
-Items: Filter(<prefix>_leaverequests, <prefix>_requestorid = User().Email)
+Items: Filter(<prefix>_<main_table>, <prefix>_<owner_lookup> = User().Email)
 Row height: 64
 Row template contains:
   - Label for Title at relative X=16, Y=8, showing ThisItem.<prefix>_title
@@ -105,7 +105,7 @@ Place the form below the header
 ### Pattern: Logic wiring (preserves visual properties)
 ```
 For the button named btnSubmit:
-- Set OnSelect to: Patch(<prefix>_leaverequests, Defaults(<prefix>_leaverequests), {<fields>}); Navigate(ScreenSuccess)
+- Set OnSelect to: Patch(<prefix>_<main_table>, Defaults(<prefix>_<main_table>), {<fields>}); Navigate(ScreenSuccess)
 DO NOT MODIFY: X, Y, Width, Height, Fill, Color, Font, Size, FontWeight,
 RadiusTopLeft, RadiusTopRight, RadiusBottomLeft, RadiusBottomRight,
 BorderColor, BorderThickness, PaddingTop, PaddingBottom, PaddingLeft, PaddingRight
@@ -115,7 +115,7 @@ BorderColor, BorderThickness, PaddingTop, PaddingBottom, PaddingLeft, PaddingRig
 ### Pattern: Data binding for gallery
 ```
 Set the Items property of galRequests to:
-SortByColumns(Filter(<prefix>_leaverequests, <prefix>_requestorid = User().Email), "createdon", SortOrder.Descending)
+SortByColumns(Filter(<prefix>_<main_table>, <prefix>_<owner_lookup> = User().Email), "createdon", SortOrder.Descending)
 DO NOT MODIFY visual properties of the gallery or its template controls.
 ```
 

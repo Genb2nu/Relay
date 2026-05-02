@@ -51,12 +51,12 @@ graph TD
 ### Diagram 2 — Entity Relationship Diagram (from plan.md)
 ```mermaid
 erDiagram
-    LEAVE_REQUEST {
-        autonumber cr_name
+    PRIMARY_ENTITY {
+        autonumber <prefix>_name
         choice <prefix>_status
         ...
     }
-    LEAVE_TYPE ||--o{ LEAVE_REQUEST : "type"
+    REFERENCE_ENTITY ||--o{ PRIMARY_ENTITY : "relationship"
     ...
 ```
 
@@ -100,8 +100,8 @@ Or as a table if a matrix is clearer:
 
 | Table | Employee | Manager | Super Admin |
 |---|---|---|---|
-| Leave Request | Create, Read Own | Read/Write BU | Full Org |
-| Leave Type | Read | Read | Full CRUD |
+| <Primary Entity> | Create, Read Own | Read/Write BU | Full Org |
+| <Reference Entity> | Read | Read | Full CRUD |
 
 ### Diagram 6 — Phase Timeline (from plan.md)
 ```mermaid

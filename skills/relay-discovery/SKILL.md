@@ -32,7 +32,7 @@ One wrong assumption at this stage costs 10x to fix in Phase 5.
 ## Anti-Pattern: "The Brief Is Clear Enough"
 
 Every project needs discovery — even ones that seem obvious.
-"Build a leave request app" could mean:
+"Build a request-management app" could mean:
 - Canvas App only, or Canvas + Model-Driven
 - Simple approval or multi-level escalation
 - Employee self-service or HR-managed

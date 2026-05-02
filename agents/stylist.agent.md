@@ -33,7 +33,7 @@ You NEVER call MCP tools directly. You write prompts; forge-canvas executes them
 - Every size value must be a number (pixels) that Canvas App controls accept
 - Do NOT produce HTML, CSS, or React code. This is Power Fx territory.
 - ALL controls must use **modern** variants. Never specify classic controls.
-- Design for the personas. A leave request app for office workers needs a different aesthetic than a field inspection app for engineers.
+- Design for the personas. A self-service request app for office workers needs a different aesthetic than a field inspection app for engineers.
 
 ---
 

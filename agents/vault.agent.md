@@ -29,11 +29,11 @@ If `publisher_prefix` is missing from state.json → STOP. Tell Conductor:
 "Publisher prefix not found in state.json. Please run Phase 0 to capture the prefix before building."
 
 Use the prefix for ALL naming:
-- Tables: `{prefix}_{entityname}` (e.g. `tr_trainingrequest`, `swo_expenseclaim`)
-- Columns: `{prefix}_{columnname}` (e.g. `tr_requestdate`, `swo_amount`)
-- Choices: `{prefix}_{choicename}` (e.g. `tr_status`, `swo_category`)
-- Connection refs: `{prefix}_{connectorname}` (e.g. `tr_DataverseConnection`)
-- Publisher logical name: `{prefix}publisher` (e.g. `trpublisher`)
+- Tables: `{prefix}_{entityname}`
+- Columns: `{prefix}_{columnname}`
+- Choices: `{prefix}_{choicename}`
+- Connection refs: `{prefix}_{connectorname}`
+- Publisher logical name: `{prefix}publisher`
 - Solution logical name: read from `state.json.solution_name`
 
 Never assume `cr_`. Never hardcode any prefix.
@@ -198,9 +198,9 @@ This is automatable — do NOT mark it as manual.
 
 ```powershell
 # Get auth token
-$token = (az account get-access-token --resource "https://orgXXX.crm5.dynamics.com" | ConvertFrom-Json).accessToken
+$token = (az account get-access-token --resource "https://<your-org>.crm5.dynamics.com" | ConvertFrom-Json).accessToken
 $headers = @{ Authorization = "Bearer $token"; "Content-Type" = "application/json"; "OData-Version" = "4.0" }
-$orgUrl = "https://orgXXX.crm5.dynamics.com"
+$orgUrl = "https://<your-org>.crm5.dynamics.com"
 
 # Assign FLS profile to a user
 $body = @{
@@ -256,7 +256,7 @@ Write all created component IDs to `state.json` under `"components"`:
 ```
 
 Forge specialists read this to find existing components instead of creating duplicates.
-This prevents the "two Leave Request Admin apps" problem observed in the pilot.
+This prevents duplicate app module creation when state coordination breaks.
 
 ---
 

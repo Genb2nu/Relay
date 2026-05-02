@@ -163,20 +163,20 @@ Power Fx formula for dynamic status badge colour:
 // Badge fill colour
 Switch(
     ThisItem.Status,
-    'Status (Leave Requests)'.Approved,  RGBA(16, 185, 129, 0.15),
-    'Status (Leave Requests)'.Rejected,  RGBA(239, 68, 68, 0.15),
-    'Status (Leave Requests)'.Escalated, RGBA(139, 92, 246, 0.15),
-    'Status (Leave Requests)'.Cancelled, RGBA(148, 163, 184, 0.15),
+  'Status (<Main Table>)'.Approved,  RGBA(16, 185, 129, 0.15),
+  'Status (<Main Table>)'.Rejected,  RGBA(239, 68, 68, 0.15),
+  'Status (<Main Table>)'.Escalated, RGBA(139, 92, 246, 0.15),
+  'Status (<Main Table>)'.Cancelled, RGBA(148, 163, 184, 0.15),
     RGBA(245, 158, 11, 0.15)  // Pending (default)
 )
 
 // Badge text colour
 Switch(
     ThisItem.Status,
-    'Status (Leave Requests)'.Approved,  RGBA(16, 185, 129, 1),
-    'Status (Leave Requests)'.Rejected,  RGBA(239, 68, 68, 1),
-    'Status (Leave Requests)'.Escalated, RGBA(139, 92, 246, 1),
-    'Status (Leave Requests)'.Cancelled, RGBA(148, 163, 184, 1),
+  'Status (<Main Table>)'.Approved,  RGBA(16, 185, 129, 1),
+  'Status (<Main Table>)'.Rejected,  RGBA(239, 68, 68, 1),
+  'Status (<Main Table>)'.Escalated, RGBA(139, 92, 246, 1),
+  'Status (<Main Table>)'.Cancelled, RGBA(148, 163, 184, 1),
     RGBA(245, 158, 11, 1)  // Pending (default)
 )
 ```

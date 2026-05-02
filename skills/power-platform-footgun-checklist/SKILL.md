@@ -119,7 +119,7 @@ review after completing the full checklist.
 
 ### 20. Duplicate app modules or components
 - **What to check**: Does state.json track all created component GUIDs? Did Forge specialists check state.json before creating any app module, connection reference, or other named component?
-- **Why it matters**: Without state coordination, a Forge specialist creates duplicate app modules when it can't find the one Vault created (naming mismatch). Leads to "two Leave Request Admin apps" problem.
+- **Why it matters**: Without state coordination, a Forge specialist creates duplicate app modules when it can't find the one Vault created (naming mismatch). Leads to duplicate app modules and inconsistent references.
 - **Mark N/A if**: No app modules or shared components in the solution.
 
 ### 21. FLS profile assignment automated
@@ -139,6 +139,6 @@ review after completing the full checklist.
 
 ### 24. Publisher prefix consistent across all components
 - **What to check**: Does every custom table, column, choice, connection reference, and environment variable use the same prefix from `state.json`? Is there any `cr_` or other hardcoded prefix that doesn't match the project's publisher?
-- **Why it matters**: Mixed prefixes (some `cr_`, some `swo_`) create orphaned components, solution import failures, and confusion in the Dataverse schema.
+- **Why it matters**: Mixed prefixes (some `cr_`, some `ops_`) create orphaned components, solution import failures, and confusion in the Dataverse schema.
 - **How to verify**: Search plan.md and the built solution for the publisher prefix. All custom logical names should start with `{prefix}_`.
 - **Mark N/A if**: Single-environment demo with no naming constraints.

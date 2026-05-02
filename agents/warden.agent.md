@@ -273,14 +273,14 @@ $empWriteHeaders = Make-Headers -Token $EmployeeToken -ForMutation
 
 # Test: employee cannot PATCH another's record
 Assert-Blocked -TestId "T-SEC-01" -Description "Employee cannot update other's record" -Action {
-    $uri = "$OrgUrl/api/data/v9.2/<prefix>_leaverequests($OtherEmployeeRecordId)"
+    $uri = "$OrgUrl/api/data/v9.2/<table_logical_name>($OtherEmployeeRecordId)"
     Invoke-RestMethod -Method PATCH -Uri $uri -Headers $empWriteHeaders -Body '{"<prefix>_notes":"hacked"}'
 }
 
 # Test: plugin throws specific error message
 Assert-ExceptionContains -TestId "T-SA-01" -Description "Self-approval blocked" `
     -ExpectedText "cannot approve their own" -Action {
-    $uri = "$OrgUrl/api/data/v9.2/<prefix>_leaverequests($ManagerOwnRequestId)"
+    $uri = "$OrgUrl/api/data/v9.2/<table_logical_name>($ManagerOwnRequestId)"
     Invoke-RestMethod -Method PATCH -Uri $uri -Headers $mgrWriteHeaders -Body '{"<prefix>_status":2}'
 }
 ```
@@ -305,7 +305,7 @@ param(
     [string]$OrgUrl,
     [string]$EmployeeToken,   # token for Employee-role user
     [string]$ManagerToken,    # token for Manager-role user
-    [string]$TestRecordId     # GUID of a test Leave Request record
+    [string]$TestRecordId     # GUID of a test business record
 )
 
 $passed = 0
@@ -324,12 +324,12 @@ function Assert-Blocked($response, $testName) {
 
 # Test 1: Employee cannot read other users' records via API
 $h = @{ Authorization = "Bearer $EmployeeToken" }
-$r = Invoke-RestMethod -Uri "$OrgUrl/api/data/v9.2/<table_prefix>_leaverequests" -Headers $h
+$r = Invoke-RestMethod -Uri "$OrgUrl/api/data/v9.2/<table_logical_name>" -Headers $h
 Assert-Blocked $r "Employee cannot read all records via API"
 
 # Test 2: FLS blocks <prefix>_<status_column> direct write by Employee
 try {
-    Invoke-RestMethod -Method PATCH -Uri "$OrgUrl/api/data/v9.2/<table_prefix>_leaverequests($TestRecordId)" `
+    Invoke-RestMethod -Method PATCH -Uri "$OrgUrl/api/data/v9.2/<table_logical_name>($TestRecordId)" `
         -Headers $h -Body '{"<status_column>": 1}' -ContentType "application/json"
     Write-Host "[FAIL]: FLS should have blocked status write"
     $failed++
@@ -341,7 +341,7 @@ try {
 # Test 3: Plugin blocks self-approval
 # (Attempt to approve own request — plugin should reject)
 try {
-    Invoke-RestMethod -Method PATCH -Uri "$OrgUrl/api/data/v9.2/<table_prefix>_leaverequests($TestRecordId)" `
+    Invoke-RestMethod -Method PATCH -Uri "$OrgUrl/api/data/v9.2/<table_logical_name>($TestRecordId)" `
         -Headers $ManagerToken -Body '{"<status_column>": <approved_value>}' -ContentType "application/json"
     # Plugin should throw if approver = submitter
     Write-Host "[SKIP] Manual check needed: verify plugin blocked self-approval"

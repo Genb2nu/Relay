@@ -192,8 +192,8 @@ Creates test fixture records with CORRECT ownership:
 param([string]$OrgUrl, [string]$AdminToken)
 # Create test records and assign ownership to specific test users
 # CRITICAL: Each record must be owned by the correct persona
-# Employee's leave request → owned by Employee user
-# Other employee's request → owned by a DIFFERENT user
+# Employee-owned business record -> owned by Employee user
+# Peer user's record -> owned by a DIFFERENT user
 # Balance record for cross-read test → owned by Manager, not Employee
 ```
 
@@ -361,7 +361,7 @@ After creating security roles (Vault's job), assign them to users:
 # Assign role to specific users
 pac admin assign-user \
   --user "employee@company.com" \
-  --role "Leave Request Employee" \
+  --role "<RoleName>" \
   --environment "https://<your-org>.crm.dynamics.com"
 ```
 

@@ -124,7 +124,7 @@ Conductor reads and writes this after every phase:
   "security_design_checksum": "sha256:1446E1...",
   "context_loaded": false,
   "components": {
-    "app_modules": { "leave_request_admin": "<guid>" },
+    "app_modules": { "admin_app": "<guid>" },
     "security_roles": { "employee": "<guid>", "manager": "<guid>" },
     "fls_profiles": { "status_protection": "<guid>" }
   },

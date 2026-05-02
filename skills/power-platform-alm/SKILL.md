@@ -54,8 +54,8 @@ Every value that changes between environments MUST be an Environment Variable:
 | Item | Convention | Example |
 |---|---|---|
 | Publisher prefix | 3-5 lowercase chars, no underscores | `relay` |
-| Solution unique name | PascalCase, no spaces | `TrainingRequestApproval` |
-| Solution display name | Human-readable | `Training Request Approval` |
+| Solution unique name | PascalCase, no spaces | `<SolutionName>` |
+| Solution display name | Human-readable | `<Solution Display Name>` |
 
 ### Component Organisation
 
@@ -119,13 +119,13 @@ pac auth select --name DEV
 
 ```bash
 # Export unmanaged (for source control)
-pac solution export --path ./export --name TrainingRequestApproval --overwrite
+pac solution export --path ./export --name <SolutionName> --overwrite
 
 # Export managed (for deployment to TEST/PROD)
-pac solution export --path ./export --name TrainingRequestApproval --managed --overwrite
+pac solution export --path ./export --name <SolutionName> --managed --overwrite
 
 # Unpack for git-friendly source control
-pac solution unpack --zipfile ./export/TrainingRequestApproval.zip --folder ./src/solution --processCanvasApps
+pac solution unpack --zipfile ./export/<SolutionName>.zip --folder ./src/solution --processCanvasApps
 ```
 
 ### Import
@@ -135,7 +135,7 @@ pac solution unpack --zipfile ./export/TrainingRequestApproval.zip --folder ./sr
 pac auth select --name TEST
 
 # Import managed solution
-pac solution import --path ./export/TrainingRequestApproval_managed.zip --activate-plugins --force-overwrite
+pac solution import --path ./export/<SolutionName>_managed.zip --activate-plugins --force-overwrite
 
 # Check import status
 pac solution list
@@ -177,9 +177,9 @@ main ─────────────────────────
 ### Commit Conventions
 
 ```
-feat(schema): add TrainingRequest table with approval columns
+feat(schema): add <MainTable> with approval columns
 fix(flow): handle null manager in approval flow
-security(roles): restrict Employee role to User-scope read on ApprovalRecord
+security(roles): restrict Employee role to User-scope read on <ApprovalTable>
 docs(plan): update deployment section after Auditor feedback
 ```
 
@@ -243,7 +243,7 @@ Flows can be fully automated by generating JSON definitions and importing them v
 ### Flow JSON Structure (simplified)
 ```json
 {
-  "name": "Leave Request — Approval Notification",
+  "name": "<FlowName> - Notification",
   "properties": {
     "definition": {
       "triggers": {
@@ -307,11 +307,11 @@ $h = @{ Authorization = "Bearer $token"; "Content-Type" = "application/json" }
 # Assign role to user
 pac admin assign-user \
   --user "user@domain.com" \
-  --role "Leave Request Employee" \
-  --environment "https://org.crm5.dynamics.com"
+  --role "<RoleName>" \
+  --environment "https://<your-org>.crm5.dynamics.com"
 
 # List users to verify
-pac admin list-app-user --environment "https://org.crm5.dynamics.com"
+pac admin list-app-user --environment "https://<your-org>.crm5.dynamics.com"
 ```
 
 ---

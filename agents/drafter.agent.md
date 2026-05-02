@@ -17,9 +17,9 @@ tools:
 ## Publisher Prefix — use in all plan.md component names
 
 Read `publisher_prefix` from `.relay/state.json` before writing plan.md.
-Use `{prefix}_tablename` format for all table and column logical names.
-In plan.md examples, write the actual prefix (e.g. `tr_trainingrequest`) —
-not a generic placeholder — so Vault and Forge specialists can follow the plan exactly.
+Use `{prefix}_{logical_name}` format for all table and column logical names.
+In plan.md examples, write the actual prefix and actual component names from the approved requirements —
+not a placeholder copied from another project — so Vault and Forge specialists can follow the plan exactly.
 
 This agent uses the `relay-planning` skill embedded in Relay. No external Superpowers dependency needed.
 
@@ -143,11 +143,11 @@ After writing plan.md and security-design.md, Drafter MUST update `.relay/plan-i
       {"logical_name": "<prefix>_<entity2>", "display_name": "<Entity2 Display Name>", "columns": <N>}
     ],
     "flows": [
-      {"name": "Leave Request — Approval Notification", "trigger": "row_created", "has_error_handling": true},
-      {"name": "Leave Request — Cancellation Handler", "trigger": "row_modified", "has_error_handling": true}
+      {"name": "<FlowName> - Notification", "trigger": "row_created", "has_error_handling": true},
+      {"name": "<FlowName> - Handler", "trigger": "row_modified", "has_error_handling": true}
     ],
-    "canvas_apps": [{"name": "Leave Request Portal", "screens": 4}],
-    "model_driven_apps": [{"name": "Leave Request Admin", "sitemap_areas": 2}],
+    "canvas_apps": [{"name": "<CanvasAppName>", "screens": 4}],
+    "model_driven_apps": [{"name": "<MDAName>", "sitemap_areas": 2}],
     "power_pages": [{"name": "<Portal Name>", "pages": 6}],
     "plugins": [{"name": "<prefix>StatusValidator", "stage": "pre_operation", "mode": "synchronous"}],
     "security_roles": [{"name": "<RoleName>"}, {"name": "<RoleName>"}],
@@ -156,5 +156,5 @@ After writing plan.md and security-design.md, Drafter MUST update `.relay/plan-i
 }
 ```
 
-Use generic names from your plan — not hardcoded Leave Request values.
+Use generic names from your plan — not hardcoded project-specific values.
 This is the plan manifest that drift detection and gate validation use.

@@ -29,7 +29,7 @@ Do not proceed until both are answered.
 >    If unsure, I'll suggest one based on the project name.
 > 2. **Environment URL** — what is your target Dataverse environment URL?
 >    (find it at make.powerapps.com → Settings gear → Session details → Instance URL)
->    Example: https://orgXXXXXXXX.crm5.dynamics.com"
+>    Example: https://<your-org>.crm5.dynamics.com"
 
 Once both are provided, write them to `.relay/state.json`:
 ```json

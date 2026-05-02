@@ -4,7 +4,7 @@ A plugin-native SDLC orchestration system for Microsoft Power Platform. Ten spec
 
 Works on **Claude Code**, **GitHub Copilot CLI**, and **Copilot in VS Code**.
 
-> **v0.6.1** — specialist hook permissions · Phase 5 state contract fix · expanded hook tests · flow automation note corrected
+> **v0.6.2** — generic placeholder normalization · documentation cleanup · release metadata refresh
 
 ---
 
@@ -136,7 +136,7 @@ Verifies all prerequisites: PAC CLI, Azure CLI, Python, Node.js, Git, Bash, jq, 
 
 Provide a brief:
 
-> Build a Leave Request Approval System. Employees submit requests via Canvas App. Managers approve via Model-Driven App. Super Admins have full oversight. Employees must only see their own requests. Unanswered requests escalate after 3 days.
+> Build a request approval system. Employees submit requests via Canvas App. Managers approve via Model-Driven App. Administrators have full oversight. Users must only see their own records. Unanswered requests escalate after 3 days.
 
 Watch the squad work.
 
@@ -410,7 +410,7 @@ relay/
 ## Roadmap
 
 ### v0.3.2
-Fixes from the Training Request pilot:
+Fixes from early project validation:
 - Publisher prefix captured in Scout's first question — never defaults to `cr_`
 - `plan-index.json` created in `commands/start.md` as first action — can't be skipped
 - `state.json` phase updated by agents at each transition
