@@ -4,6 +4,25 @@ All notable changes to Relay are documented here.
 
 ---
 
+## [0.6.1] — 2026-05-XX
+
+### Critical Fixes
+- pre-tool-use.sh: added forge-canvas, forge-mda, forge-flow, and forge-pages with scoped artifact writes plus `.relay/plan-index.json` and `.relay/execution-log.jsonl`
+- Phase 5 state contract migrated from `forge_complete` to specialist completion fields across the scaffold, template, and gate validator
+- Phase 5 component inventory now includes `power_pages`
+- drafter.agent.md now writes `power_pages` into the plan manifest so Phase 5 can require `power_pages_complete`
+
+### Validation
+- tests/test-hooks.sh: added specialist hook cases for forge-canvas, forge-mda, forge-flow, and forge-pages
+- Python status output now uses ASCII markers across gate, drift, consistency, score, and prerequisite scripts for Windows-safe console output
+
+### Docs
+- README automation table now marks Power Automate flow output as a temporary build-guide path
+- AGENTS.md specialist write permissions now match the enforced hook behavior
+- Release metadata bumped to 0.6.1
+
+---
+
 ## [0.6.0] — 2026-05-XX
 
 ### Architecture

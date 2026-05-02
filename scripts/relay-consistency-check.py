@@ -171,7 +171,7 @@ def main():
     issues = check_consistency(pi)
 
     if issues:
-        print(f"\n⚠️  CONSISTENCY ISSUES FOUND — {len(issues)} discrepancies between plan-index.json and docs:")
+        print(f"\n[WARN] CONSISTENCY ISSUES FOUND - {len(issues)} discrepancies between plan-index.json and docs:")
         for i, issue in enumerate(issues, 1):
             print(f"\n  [{i}] Claim: {issue['claim']}")
             print(f"       Checked: {issue['check']}")
@@ -179,7 +179,7 @@ def main():
         log_event("consistency_failed", {"issues": len(issues), "details": issues})
         sys.exit(1)
     else:
-        print("✅ Consistency check passed — plan-index.json is consistent with docs")
+        print("[PASS] Consistency check passed - plan-index.json is consistent with docs")
         log_event("consistency_passed")
         sys.exit(0)
 

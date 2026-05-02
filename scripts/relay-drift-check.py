@@ -230,15 +230,15 @@ def write_drift_report(drift_items, passed_items):
     lines = [f"# Drift Report\nGenerated: {datetime.now(timezone.utc).isoformat()}\n"]
 
     if not drift_items:
-        lines.append("## ✅ No drift detected\nAll planned components found in the built solution.\n")
+        lines.append("## [PASS] No drift detected\nAll planned components found in the built solution.\n")
     else:
-        lines.append(f"## 🔴 Drift detected — {len(drift_items)} component(s) missing\n")
+        lines.append(f"## [BLOCK] Drift detected - {len(drift_items)} component(s) missing\n")
         lines.append("| Type | Name | Issue |\n|---|---|---|")
         for item in drift_items:
             lines.append(f"| {item['type']} | {item['name']} | {item['issue']} |")
         lines.append("")
 
-    lines.append(f"## ✅ Verified — {len(passed_items)} component(s) confirmed\n")
+    lines.append(f"## [PASS] Verified - {len(passed_items)} component(s) confirmed\n")
     lines.append("| Type | Name | Status |\n|---|---|---|")
     for item in passed_items:
         lines.append(f"| {item['type']} | {item['name']} | {item['status']} |")
@@ -252,7 +252,7 @@ def main():
     args = parser.parse_args()
 
     pi = load_plan_index()
-    print(f"\n🔍 Running drift detection against {args.env}...")
+    print(f"\n[INFO] Running drift detection against {args.env}...")
 
     drift_items, passed_items = drift_check(pi, args.env)
     write_drift_report(drift_items, passed_items)
@@ -265,13 +265,13 @@ def main():
     atomic_write_json(PLAN_INDEX_PATH, pi)
 
     if drift_items:
-        print(f"\n🔴 DRIFT DETECTED — {len(drift_items)} component(s) missing:")
+        print(f"\n[BLOCK] DRIFT DETECTED - {len(drift_items)} component(s) missing:")
         for d in drift_items:
-            print(f"  ✗ {d['type']}: {d['name']} — {d['issue']}")
+            print(f"  [FAIL] {d['type']}: {d['name']} - {d['issue']}")
         log_event("sentinel", "drift_detected", {"items": drift_items})
         sys.exit(1)
     else:
-        print(f"\n✅ NO DRIFT — {len(passed_items)} component(s) verified")
+        print(f"\n[PASS] NO DRIFT - {len(passed_items)} component(s) verified")
         log_event("sentinel", "drift_clear", {"verified": len(passed_items)})
         sys.exit(0)
 

@@ -148,6 +148,7 @@ After writing plan.md and security-design.md, Drafter MUST update `.relay/plan-i
     ],
     "canvas_apps": [{"name": "Leave Request Portal", "screens": 4}],
     "model_driven_apps": [{"name": "Leave Request Admin", "sitemap_areas": 2}],
+    "power_pages": [{"name": "<Portal Name>", "pages": 6}],
     "plugins": [{"name": "<prefix>StatusValidator", "stage": "pre_operation", "mode": "synchronous"}],
     "security_roles": [{"name": "<RoleName>"}, {"name": "<RoleName>"}],
     "environment_variables": [{"name": "<prefix>_EscalationDays"}, {"name": "<prefix>_AdminPortalUrl"}]

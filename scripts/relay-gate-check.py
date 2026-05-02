@@ -241,31 +241,36 @@ def check_phase4(pi):
 
 
 def check_phase5(pi):
-    """Phase 5 gate: Vault and Forge must complete. Verify actual artifacts exist."""
+    """Phase 5 gate: Vault and any applicable build specialists must complete."""
     gate = pi["phase_gates"]["phase5_build"]
     errors = []
+    components = pi.get("components", {})
 
     if not gate["vault_complete"]:
         errors.append("Vault has not completed schema build")
-    if not gate["forge_complete"]:
-        errors.append("Forge has not completed app/flow build")
+    if components.get("canvas_apps") and not gate.get("canvas_app_complete", False):
+        errors.append("Canvas App in plan but forge-canvas has not completed")
+    if components.get("model_driven_apps") and not gate.get("mda_complete", False):
+        errors.append("Model-Driven App in plan but forge-mda has not completed")
+    if components.get("flows") and not gate.get("flows_documented", False):
+        errors.append("Flows in plan but forge-flow has not produced a build guide")
+    if components.get("power_pages") and not gate.get("power_pages_complete", False):
+        errors.append("Power Pages in plan but forge-pages has not completed")
     if gate["components_blocked"]:
         errors.append(f"Components blocked: {gate['components_blocked']}")
 
     # Content verification — check actual artifacts, not just flags
     # Check for plugin DLL if plugins are in the plan
-    components = pi.get("components", {})
     if components.get("plugins"):
         plugin_dlls = [f for f in _find_files("src/plugins", "*.dll")]
         if not plugin_dlls:
             errors.append("Plugins in plan but no .dll found in src/plugins/ — build may not have compiled")
 
-    # Check for flow JSON with Dataverse-shaped content (not ARM)
+    # Check for the current flow output: build guide now, JSON artifacts later
     if components.get("flows"):
         flow_files = _find_files("src/flows", "*.json")
-        if not flow_files:
-            errors.append("Flows in plan but no .json found in src/flows/")
-        else:
+        flow_guide_path = "docs/flow-build-guide.md"
+        if flow_files:
             for ff in flow_files:
                 try:
                     with open(ff, encoding="utf-8") as fh:
@@ -275,6 +280,8 @@ def check_phase5(pi):
                 except Exception as e:
                     print(f"Error: {e}")
                     errors.append(f"{ff} could not be parsed: {e}")
+        elif not os.path.exists(flow_guide_path):
+            errors.append("Flows in plan but neither src/flows/*.json nor docs/flow-build-guide.md exists")
 
     # Check for essential scripts
     essential_scripts = []
@@ -359,13 +366,13 @@ def main():
     if phase == 0:
         errors = check_fn()
         if errors:
-            print("\n🔴 GATE FAILED — Phase 0 scaffold is invalid. Cannot proceed to discovery.")
+            print("\n[BLOCK] GATE FAILED - Phase 0 scaffold is invalid. Cannot proceed to discovery.")
             for e in errors:
-                print(f"  ✗ {e}")
+                print(f"  [FAIL] {e}")
             log_event("conductor", "gate_failed", phase, {"errors": errors})
             sys.exit(1)
 
-        print("\n✅ GATE PASSED — Phase 0 scaffold is valid. Safe to begin discovery.")
+        print("\n[PASS] GATE PASSED - Phase 0 scaffold is valid. Safe to begin discovery.")
         log_event("conductor", "gate_passed", phase)
         sys.exit(0)
 
@@ -373,9 +380,9 @@ def main():
     errors = check_fn(pi)
 
     if errors:
-        print(f"\n🔴 GATE FAILED — Phase {phase} is not complete. Cannot advance.")
+        print(f"\n[BLOCK] GATE FAILED - Phase {phase} is not complete. Cannot advance.")
         for e in errors:
-            print(f"  ✗ {e}")
+            print(f"  [FAIL] {e}")
         log_event("conductor", "gate_failed", phase, {"errors": errors})
         # Update plan-index
         gate_key = GATE_NAMES.get(phase)
@@ -384,7 +391,7 @@ def main():
         save_plan_index(pi)
         sys.exit(1)
     else:
-        print(f"\n✅ GATE PASSED — Phase {phase} complete. Safe to advance.")
+        print(f"\n[PASS] GATE PASSED - Phase {phase} complete. Safe to advance.")
         gate_key = GATE_NAMES.get(phase)
         if gate_key and gate_key in pi["phase_gates"]:
             pi["phase_gates"][gate_key]["passed"] = True

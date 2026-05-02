@@ -6,6 +6,7 @@
 #   3. Auditor read-only: blocks Auditor from writing to any file
 #   4. Sentinel write restriction: only test-report.md
 #   5. Warden write restriction: only security-design.md and security-test-report.md
+#   6. Forge specialists restricted to their artifact paths plus Relay state files
 #
 # Exit codes:
 #   0 = allow
@@ -102,6 +103,14 @@ REQUIREMENTS_PATH=$(canonicalize_path "docs/requirements.md" "$WORKSPACE_ROOT")
 DESIGN_SYSTEM_PATH=$(canonicalize_path "docs/design-system.md" "$WORKSPACE_ROOT")
 DESIGN_REVIEW_PATH=$(canonicalize_path "docs/design-review.md" "$WORKSPACE_ROOT")
 EXISTING_SOLUTION_PATH=$(canonicalize_path "docs/existing-solution.md" "$WORKSPACE_ROOT")
+CANVAS_APP_INSTRUCTIONS_PATH=$(canonicalize_path "docs/canvas-app-instructions.md" "$WORKSPACE_ROOT")
+FLOW_BUILD_GUIDE_PATH=$(canonicalize_path "docs/flow-build-guide.md" "$WORKSPACE_ROOT")
+PLAN_INDEX_PATH=$(canonicalize_path ".relay/plan-index.json" "$WORKSPACE_ROOT")
+EXECUTION_LOG_PATH=$(canonicalize_path ".relay/execution-log.jsonl" "$WORKSPACE_ROOT")
+CANVAS_APP_DIR=$(canonicalize_path "src/canvas-apps" "$WORKSPACE_ROOT")
+MDA_DIR=$(canonicalize_path "src/mda" "$WORKSPACE_ROOT")
+PAGES_DIR=$(canonicalize_path "src/pages" "$WORKSPACE_ROOT")
+APPLY_MDA_SITEMAP_PATH=$(canonicalize_path "scripts/apply-mda-sitemap.ps1" "$WORKSPACE_ROOT")
 
 # --- Check 1: Plan Lock ---
 if [ -f "$STATE_FILE" ]; then
@@ -132,7 +141,7 @@ if [ -z "$AGENT" ]; then
 fi
 
 case "$AGENT" in
-  conductor|auditor|critic|sentinel|warden|scout|drafter|stylist|analyst|forge|vault) ;;
+  conductor|auditor|critic|sentinel|warden|scout|drafter|stylist|analyst|forge|vault|forge-canvas|forge-mda|forge-flow|forge-pages) ;;
   *)
     echo "BLOCKED: Unknown agent '$AGENT'. Writes are denied by default." >&2
     exit 2
@@ -206,6 +215,48 @@ case "$AGENT" in
     # Forge can only write under src/ or scripts/
     if ! path_under "$CANONICAL_PATH" "$SRC_DIR" && ! path_under "$CANONICAL_PATH" "$SCRIPTS_DIR"; then
       echo "BLOCKED: Forge can only write under src/ or scripts/. Found: $CANONICAL_PATH" >&2
+      exit 2
+    fi
+    ;;
+
+  forge-canvas)
+    # Forge-Canvas can only write Canvas App artifacts, fallback instructions, and Relay state files
+    if ! path_under "$CANONICAL_PATH" "$CANVAS_APP_DIR" \
+      && ! path_is "$CANONICAL_PATH" "$CANVAS_APP_INSTRUCTIONS_PATH" \
+      && ! path_is "$CANONICAL_PATH" "$PLAN_INDEX_PATH" \
+      && ! path_is "$CANONICAL_PATH" "$EXECUTION_LOG_PATH"; then
+      echo "BLOCKED: Forge-Canvas can only write under src/canvas-apps/, docs/canvas-app-instructions.md, or Relay state files. Found: $CANONICAL_PATH" >&2
+      exit 2
+    fi
+    ;;
+
+  forge-mda)
+    # Forge-MDA can only write MDA artifacts, the MDA deploy script, and Relay state files
+    if ! path_under "$CANONICAL_PATH" "$MDA_DIR" \
+      && ! path_is "$CANONICAL_PATH" "$APPLY_MDA_SITEMAP_PATH" \
+      && ! path_is "$CANONICAL_PATH" "$PLAN_INDEX_PATH" \
+      && ! path_is "$CANONICAL_PATH" "$EXECUTION_LOG_PATH"; then
+      echo "BLOCKED: Forge-MDA can only write under src/mda/, scripts/apply-mda-sitemap.ps1, or Relay state files. Found: $CANONICAL_PATH" >&2
+      exit 2
+    fi
+    ;;
+
+  forge-flow)
+    # Forge-Flow can only write the flow build guide and Relay state files
+    if ! path_is "$CANONICAL_PATH" "$FLOW_BUILD_GUIDE_PATH" \
+      && ! path_is "$CANONICAL_PATH" "$PLAN_INDEX_PATH" \
+      && ! path_is "$CANONICAL_PATH" "$EXECUTION_LOG_PATH"; then
+      echo "BLOCKED: Forge-Flow can only write docs/flow-build-guide.md or Relay state files. Found: $CANONICAL_PATH" >&2
+      exit 2
+    fi
+    ;;
+
+  forge-pages)
+    # Forge-Pages can only write portal artifacts and Relay state files
+    if ! path_under "$CANONICAL_PATH" "$PAGES_DIR" \
+      && ! path_is "$CANONICAL_PATH" "$PLAN_INDEX_PATH" \
+      && ! path_is "$CANONICAL_PATH" "$EXECUTION_LOG_PATH"; then
+      echo "BLOCKED: Forge-Pages can only write under src/pages/ or Relay state files. Found: $CANONICAL_PATH" >&2
       exit 2
     fi
     ;;

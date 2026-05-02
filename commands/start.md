@@ -78,10 +78,10 @@ $planIndex = @{
         phase2_planning = @{ passed = $false; validated_at = $null; plan_md_exists = $false; security_design_md_exists = $false; all_entities_have_columns = $false; all_flows_have_error_handling = $false; decision_needed_count = 0 }
         phase3_review = @{ passed = $false; auditor_approved = $false; warden_approved = $false; auditor_issues_found = 0; auditor_issues_resolved = 0; warden_issues_found = 0; warden_issues_resolved = 0 }
         phase4_adversarial = @{ passed = $false; critic_approved = $false; checklist_items_total = 0; checklist_items_passed = 0; blocking_issues_found = 0; blocking_issues_resolved = 0; plan_locked = $false; plan_checksum = $null; security_design_checksum = $null }
-        phase5_build = @{ passed = $false; vault_complete = $false; stylist_complete = $false; forge_complete = $false; components_built = @(); components_partial = @(); components_blocked = @() }
+      phase5_build = @{ passed = $false; vault_complete = $false; stylist_complete = $false; canvas_app_complete = $false; mda_complete = $false; flows_documented = $false; flow_count = 0; power_pages_complete = $false; components_built = @(); components_partial = @(); components_blocked = @() }
         phase6_verify = @{ passed = $false; sentinel_approved = $false; warden_approved = $false; security_tests_passed = 0; security_tests_failed = 0; drift_detected = $false; drift_items = @() }
     }
-    components = @{ tables = @(); flows = @(); canvas_apps = @(); model_driven_apps = @(); plugins = @(); security_roles = @(); fls_profiles = @(); connection_references = @(); environment_variables = @() }
+    components = @{ tables = @(); flows = @(); canvas_apps = @(); model_driven_apps = @(); power_pages = @(); plugins = @(); security_roles = @(); fls_profiles = @(); connection_references = @(); environment_variables = @() }
     scores = @{ plan_completeness = $null; security_coverage = $null; testability = $null; overall = $null; scored_at = $null }
     approved_by = @()
     decisions = @()

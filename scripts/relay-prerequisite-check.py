@@ -531,7 +531,7 @@ def check_mcp_servers(skip=False):
             for name, cfg in servers.items():
                 url = cfg.get("url", "") if isinstance(cfg, dict) else ""
                 if "dynamics.com" in url or "api/mcp" in url:
-                    dv_servers.append(f"{name} → {url}")
+                    dv_servers.append(f"{name} -> {url}")
 
             if dv_servers:
                 found_any = True
@@ -581,7 +581,7 @@ def check_mcp_servers(skip=False):
             for name, cfg in servers.items():
                 url = cfg.get("url", "") if isinstance(cfg, dict) else ""
                 if "dynamics.com" in url or "api/mcp" in url:
-                    dv_cli.append(f"{name} → {url}")
+                    dv_cli.append(f"{name} -> {url}")
             if dv_cli:
                 found_any = True
                 results.append({
@@ -742,12 +742,12 @@ def main():
         print()
 
         for r in all_results:
-            icon = {"PASS": "✓", "FAIL": "✗", "WARN": "!", "SKIP": "-"}.get(r["status"], "?")
+            icon = {"PASS": "PASS", "FAIL": "FAIL", "WARN": "WARN", "SKIP": "SKIP"}.get(r["status"], "?")
             crit = " [CRITICAL]" if r.get("critical") and r["status"] == "FAIL" else ""
             print(f"  [{icon}] {r['check']}: {r['message']}{crit}")
             if r.get("remediation") and r["status"] in ("FAIL", "WARN"):
                 for line in r["remediation"].split("\n"):
-                    print(f"      → {line}")
+                    print(f"      -> {line}")
             print()
 
         if fix_results:
@@ -755,7 +755,7 @@ def main():
             print("  AUTO-FIX RESULTS")
             print("-" * 60)
             for fr in fix_results:
-                print(f"  {fr['check']}: {fr.get('action', '')} — {fr.get('message', fr.get('status', ''))}")
+                print(f"  {fr['check']}: {fr.get('action', '')} - {fr.get('message', fr.get('status', ''))}")
             print()
 
         print("-" * 60)
@@ -770,7 +770,7 @@ def main():
                 print(f"    • {cf['check']}: {cf['message']}")
                 if cf.get("remediation"):
                     for line in cf["remediation"].split("\n"):
-                        print(f"      → {line}")
+                        print(f"      -> {line}")
             print()
             print("  Fix the critical issues above before running /relay:start.")
         elif non_critical_fails:
@@ -779,7 +779,7 @@ def main():
             print("  Relay will work but some automation features may be limited.")
         else:
             print()
-            print("  ✓ ALL PREREQUISITES MET — ready to start a Relay project.")
+            print("  [PASS] ALL PREREQUISITES MET - ready to start a Relay project.")
 
         print("=" * 60)
 

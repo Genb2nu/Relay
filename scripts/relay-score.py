@@ -222,7 +222,7 @@ def main():
 
     atomic_write_text(SCORES_PATH, "\n".join(lines) + "\n")
 
-    print(f"\n📊 Plan Scores:")
+    print(f"\n[SCORE] Plan Scores:")
     print(f"  Completeness: {c_score}/100")
     print(f"  Security:     {s_score}/100")
     print(f"  Testability:  {t_score}/100")
@@ -230,7 +230,7 @@ def main():
 
     if c_gaps or s_gaps or t_gaps:
         all_gaps = c_gaps + s_gaps + t_gaps
-        print(f"\n⚠️  {len(all_gaps)} gap(s) identified — see docs/plan-scores.md")
+        print(f"\n[WARN] {len(all_gaps)} gap(s) identified - see docs/plan-scores.md")
 
     log_event("conductor", "plan_scored", {
         "completeness": c_score,

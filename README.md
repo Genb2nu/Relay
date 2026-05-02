@@ -4,7 +4,7 @@ A plugin-native SDLC orchestration system for Microsoft Power Platform. Ten spec
 
 Works on **Claude Code**, **GitHub Copilot CLI**, and **Copilot in VS Code**.
 
-> **v0.6.0** — Forge specialist split · /relay:learn · /relay:doctor full implementation · CHANGELOG.md
+> **v0.6.1** — specialist hook permissions · Phase 5 state contract fix · expanded hook tests · flow automation note corrected
 
 ---
 
@@ -328,7 +328,7 @@ Sentinel generates and runs Playwright TypeScript tests using Microsoft's offici
 | MDA sitemap + form XML | ✅ Automated via Dataverse API |
 | Canvas App screens + formulas | ✅ Automated via Canvas Authoring MCP |
 | Code app connectors (Dataverse, Outlook, SharePoint…) | ✅ Automated via code-apps plugin |
-| Power Automate flows (build + activate) | ✅ Automated via Dataverse clientdata PATCH |
+| Power Automate flows (build + activate) | ⚠️ Build guide (temporary) — automated import planned for v0.6.x |
 | Connection reference wiring | ✅ Automated — reuses existing connections |
 | Security role → user assignment | ✅ `pac admin assign-user` |
 | Canvas App first-time data source OAuth | ⚠️ User adds once in Power Apps Studio |

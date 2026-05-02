@@ -98,6 +98,30 @@ pass "Stylist is restricted to its allowed docs output"
 run_pre_tool_case "conductor" "docs/test-report.md" 0
 pass "Conductor retains write access"
 
+run_pre_tool_case "forge-canvas" "src/canvas-apps/app.pa.yaml" 0
+pass "Forge-Canvas can write Canvas App source files"
+
+run_pre_tool_case "forge-canvas" ".relay/plan-index.json" 0
+pass "Forge-Canvas can update plan-index"
+
+run_pre_tool_case "forge-mda" "src/mda/sitemap.xml" 0
+pass "Forge-MDA can write MDA source files"
+
+run_pre_tool_case "forge-mda" "scripts/apply-mda-sitemap.ps1" 0
+pass "Forge-MDA can write its deploy script"
+
+run_pre_tool_case "forge-flow" "docs/flow-build-guide.md" 0
+pass "Forge-Flow can write the flow build guide"
+
+run_pre_tool_case "forge-flow" ".relay/execution-log.jsonl" 0
+pass "Forge-Flow can append execution logs"
+
+run_pre_tool_case "forge-pages" "src/pages/index.html" 0
+pass "Forge-Pages can write portal source files"
+
+run_pre_tool_case "forge-pages" ".relay/plan-index.json" 0
+pass "Forge-Pages can update plan-index"
+
 run_phase_gate_case false false 2
 pass "pac solution import is blocked before Phase 4 completion"
 

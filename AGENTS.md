@@ -85,10 +85,10 @@ tools:
 | Analyst | `docs/existing-solution.md` |
 | Vault | `scripts/*.ps1`, `src/solution/` |
 | Forge | `src/plugins/`, `src/webresources/`, `src/pcf/`, `scripts/` |
-| Forge-Canvas | `src/canvas-apps/` |
-| Forge-MDA | `src/mda/`, `scripts/apply-mda-sitemap.ps1` |
-| Forge-Flow | `docs/flow-build-guide.md` |
-| Forge-Pages | `src/pages/` |
+| Forge-Canvas | `src/canvas-apps/`, `docs/canvas-app-instructions.md`, `.relay/plan-index.json`, `.relay/execution-log.jsonl` |
+| Forge-MDA | `src/mda/`, `scripts/apply-mda-sitemap.ps1`, `.relay/plan-index.json`, `.relay/execution-log.jsonl` |
+| Forge-Flow | `docs/flow-build-guide.md`, `.relay/plan-index.json`, `.relay/execution-log.jsonl` |
+| Forge-Pages | `src/pages/`, `.relay/plan-index.json`, `.relay/execution-log.jsonl` |
 | Sentinel | `docs/test-report.md`, `docs/drift-report.md` |
 
 ---
@@ -222,3 +222,4 @@ Project-specific content belongs in the project's `.relay/` and `docs/` folders,
 | v0.5.1 | CLI context overflow fix; template independence; flow build guide; Canvas MCP-only; Vault PS 5.1 strict compat; idempotent roles; FLS SP membership; AddSolutionComponent constants |
 | v0.5.2 | Deny-by-default hooks; full-path enforcement; Stylist/Analyst hook cases; drift-check subprocess hardening; expanded phase-gate coverage; state schema validation; regression harness |
 | v0.6.0 | Forge split into 4 specialists (forge-canvas, forge-mda, forge-flow, forge-pages); /relay:learn command; /relay:doctor full implementation; CHANGELOG.md |
+| v0.6.1 | Specialist hook permissions; Phase 5 specialist completion state; expanded hook tests; flow automation note corrected |
