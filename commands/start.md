@@ -51,7 +51,7 @@ python (Join-Path $relayRoot "scripts\relay-prerequisite-check.py")
 
 ## Step 0b — Initialise project files
 
-After prerequisites pass, run these commands:
+After prerequisites pass, if you are creating a fresh scaffold (new project or user chose Reset), run these commands:
 
 ```powershell
 # Create .relay/ folder
@@ -59,24 +59,56 @@ New-Item -ItemType Directory -Force -Path .relay | Out-Null
 New-Item -ItemType Directory -Force -Path docs | Out-Null
 New-Item -ItemType Directory -Force -Path src | Out-Null
 
-# Initialise state.json
-$state = @{
-    project_name = ""
-    publisher_prefix = ""
-    environment_url = ""
-    solution_name = ""
-    phase = "discovery"
-    mode = "greenfield"
-    plan_checksum = $null
-    security_design_checksum = $null
-    approvals = @{}
-    components = @{
-        app_modules = @{}
-        security_roles = @{}
-        fls_profiles = @{}
-        connection_references = @{}
+# Initialise state.json from the canonical Relay state schema
+$stateSchemaPath = Join-Path $relayRoot "schemas\state.schema.json"
+if (-not (Test-Path $stateSchemaPath)) {
+  throw "Canonical state schema not found at $stateSchemaPath"
+}
+
+$stateSchema = Get-Content -Path $stateSchemaPath -Raw | ConvertFrom-Json -Depth 20
+
+function New-RelayStateValue {
+  param([object]$Schema)
+
+  if ($Schema.PSObject.Properties.Name -contains "enum") {
+    return $Schema.enum[0]
+  }
+
+  $types = @()
+  if ($Schema.PSObject.Properties.Name -contains "type") {
+    if ($Schema.type -is [System.Array]) {
+      $types = @($Schema.type)
+    } else {
+      $types = @($Schema.type)
     }
-} | ConvertTo-Json -Depth 5
+  }
+
+  if ($types -contains "null") {
+    return $null
+  }
+
+  if ($types -contains "object") {
+    $value = [ordered]@{}
+    if ($Schema.PSObject.Properties.Name -contains "properties") {
+      foreach ($property in $Schema.properties.PSObject.Properties) {
+        $value[$property.Name] = New-RelayStateValue -Schema $property.Value
+      }
+    }
+    return $value
+  }
+
+  if ($types -contains "array") {
+    return @()
+  }
+
+  if ($types -contains "boolean") {
+    return $false
+  }
+
+  return ""
+}
+
+$state = New-RelayStateValue -Schema $stateSchema | ConvertTo-Json -Depth 10
 Set-Content -Path ".relay/state.json" -Value $state
 
 # Copy the canonical plan-index scaffold from the Relay plugin root
@@ -115,13 +147,24 @@ Only AFTER files are created — invoke Scout for discovery.
 When the user invokes this command:
 
 1. Check if `.relay/state.json` already exists in the current directory.
-  - If yes AND `context_loaded` is `true`: proceed normally — merge the existing state with the Phase 0 scaffold above. Read `.relay/context-summary.md` and pass it to Scout.
-   - If yes AND `phase` is any other value: refuse: "This folder already has an active Relay project at phase '<phase>'. Run `/relay:status` to see where you are, or delete `.relay/state.json` to start fresh."
+  - If no: run Step 0b once, then continue.
+  - If yes: read `.relay/state.json` and show the user the current `project_name`, `solution_name`, `phase`, and `context_loaded` state.
+  - Offer exactly three choices before making any changes:
+    - `Resume`: keep the existing `.relay/` files and do NOT run Step 0b again.
+      - If `phase` is `discovery` and `.relay/context-summary.md` exists or `context_loaded` is `true`, read `.relay/context-summary.md` and use it as Scout's starting brief.
+      - Otherwise continue the active Relay project from its current phase instead of starting a new one.
+    - `Reset`: archive the existing `.relay/` folder to `.relay.backup-<timestamp>`, then run Step 0b to create a fresh scaffold.
+    - `Cancel`: stop with no file changes.
+  - Never delete or overwrite an existing `.relay/` state unless the user explicitly chooses `Reset`.
 
-2. Use the Phase 0 scaffold above as the canonical state shape and keep `phase` within this set only:
+2. Use the schema-backed Phase 0 scaffold above as the canonical state shape and keep `phase` within this set only:
   `discovery`, `planning`, `review`, `adversarial`, `build`, `verify`, `complete`.
 
-3. Ask the user for a one-paragraph project brief. Explain:
-   "Give me a one-paragraph brief describing what you want to build. Include: who will use it (personas), what they need to do, and any security-sensitive data. I'll hand this to Scout for discovery."
+3. Determine Scout's starting input.
+  - If `.relay/context-summary.md` exists or `context_loaded` is `true`, do NOT ask the user to restate the project brief. Read the summary first and pass it to Scout. Only ask the user for a short addendum if they want to add new goals or constraints since `/relay:load`.
+  - Otherwise ask the user for a one-paragraph project brief. Explain:
+    "Give me a one-paragraph brief describing what you want to build. Include: who will use it (personas), what they need to do, and any security-sensitive data. I'll hand this to Scout for discovery."
 
-4. Once the user provides the brief, invoke Scout with the brief text.
+4. Invoke Scout with either:
+  - the `.relay/context-summary.md` contents plus any user addendum, or
+  - the one-paragraph brief from Step 3.
