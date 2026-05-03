@@ -35,6 +35,9 @@ import argparse
 from datetime import datetime, timezone
 from pathlib import Path
 
+SCRIPT_DIR = Path(__file__).resolve().parent
+PLUGIN_ROOT = SCRIPT_DIR.parent
+
 # ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
@@ -377,6 +380,7 @@ def check_skills(relay_root=None):
     search_paths = []
     if relay_root:
         search_paths.append(Path(relay_root) / "skills")
+    search_paths.append(PLUGIN_ROOT / "skills")
     # Check common locations
     search_paths.append(Path("skills"))
     # Check parent if we're in a sandbox

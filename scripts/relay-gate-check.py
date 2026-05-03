@@ -25,11 +25,15 @@ import argparse
 import tempfile
 from datetime import datetime, timezone
 
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PLUGIN_ROOT = os.path.dirname(SCRIPT_DIR)
+
 PLAN_INDEX_PATH = ".relay/plan-index.json"
 STATE_PATH = ".relay/state.json"
-STATE_SCHEMA_PATH = "schemas/state.schema.json"
+STATE_SCHEMA_PATH = os.path.join(PLUGIN_ROOT, "schemas", "state.schema.json")
 LOG_PATH = ".relay/execution-log.jsonl"
 WIREFRAMES_PATH = "docs/wireframes.html"
+CONSISTENCY_CHECK_PATH = os.path.join(SCRIPT_DIR, "relay-consistency-check.py")
 
 
 def load_json_file(path, description):
@@ -196,7 +200,7 @@ def check_phase2(pi):
     # Run consistency check — catches lying agents
     import subprocess
     result = subprocess.run(
-        [sys.executable, "scripts/relay-consistency-check.py"],
+        [sys.executable, CONSISTENCY_CHECK_PATH],
         capture_output=True, text=True
     )
     if result.returncode != 0:

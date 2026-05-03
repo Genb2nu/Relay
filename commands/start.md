@@ -11,18 +11,29 @@ trigger_keywords:
 
 ## Step 0a — Prerequisite Check (FIRST — before anything else)
 
+Before creating any files or asking any questions, resolve the Relay plugin root once:
+
+```powershell
+$relayRoot = (Get-Location).Path
+
+if (-not (Test-Path (Join-Path $relayRoot "scripts\relay-prerequisite-check.py"))) {
+    $relayScript = Get-ChildItem -Path (Join-Path $env:USERPROFILE ".copilot") -Recurse -Filter relay-prerequisite-check.py -ErrorAction SilentlyContinue |
+        Select-Object -First 1
+    if ($relayScript) {
+        $relayRoot = Split-Path $relayScript.DirectoryName -Parent
+    }
+}
+
+if (-not (Test-Path (Join-Path $relayRoot "scripts\relay-prerequisite-check.py"))) {
+    throw "Could not locate the Relay plugin root. Ensure Relay is available locally before running /relay:start."
+}
+```
+
 Before creating any files or asking any questions, run the prerequisite check:
 
 ```powershell
 $env:PYTHONUTF8 = "1"
-python scripts/relay-prerequisite-check.py
-```
-
-If the script is not found (running from a project folder), try the plugin root:
-```powershell
-python "$PSScriptRoot/../scripts/relay-prerequisite-check.py"
-# Or if Relay is installed as a Copilot plugin, find it:
-# python (Get-ChildItem -Recurse -Filter relay-prerequisite-check.py -Path $env:USERPROFILE/.copilot 2>$null | Select -First 1).FullName
+python (Join-Path $relayRoot "scripts\relay-prerequisite-check.py")
 ```
 
 **If the gate returns exit code 1 (critical failures):**
@@ -30,7 +41,7 @@ python "$PSScriptRoot/../scripts/relay-prerequisite-check.py"
 - Do NOT proceed to scaffolding
 - Offer to run with `--fix` to attempt auto-remediation:
   ```powershell
-  python scripts/relay-prerequisite-check.py --fix
+  python (Join-Path $relayRoot "scripts\relay-prerequisite-check.py") --fix
   ```
 - After fixes, re-run the check. Only proceed when gate returns exit 0.
 
@@ -68,25 +79,12 @@ $state = @{
 } | ConvertTo-Json -Depth 5
 Set-Content -Path ".relay/state.json" -Value $state
 
-# Copy plan-index schema as starting plan-index.json
-# Read from plugin root if available, otherwise create minimal version
-$planIndex = @{
-    version = "1.0"
-    project = @{ name = ""; solution = ""; publisher_prefix = ""; environment = "" }
-    phase_gates = @{
-        phase1_discovery = @{ passed = $false; validated_at = $null; persona_count = 0; user_story_count = 0; entity_count = 0 }
-        phase2_planning = @{ passed = $false; validated_at = $null; plan_md_exists = $false; security_design_md_exists = $false; wireframes_complete = $false; wireframes_approved = $false; all_entities_have_columns = $false; all_flows_have_error_handling = $false; decision_needed_count = 0 }
-        phase3_review = @{ passed = $false; auditor_approved = $false; warden_approved = $false; auditor_issues_found = 0; auditor_issues_resolved = 0; warden_issues_found = 0; warden_issues_resolved = 0 }
-        phase4_adversarial = @{ passed = $false; critic_approved = $false; checklist_items_total = 0; checklist_items_passed = 0; blocking_issues_found = 0; blocking_issues_resolved = 0; plan_locked = $false; plan_checksum = $null; security_design_checksum = $null }
-      phase5_build = @{ passed = $false; vault_complete = $false; stylist_complete = $false; canvas_app_complete = $false; mda_complete = $false; flows_documented = $false; flow_count = 0; power_pages_complete = $false; components_built = @(); components_partial = @(); components_blocked = @() }
-        phase6_verify = @{ passed = $false; sentinel_approved = $false; warden_approved = $false; security_tests_passed = 0; security_tests_failed = 0; drift_detected = $false; drift_items = @() }
-    }
-    components = @{ tables = @(); flows = @(); canvas_apps = @(); model_driven_apps = @(); power_pages = @(); plugins = @(); security_roles = @(); fls_profiles = @(); connection_references = @(); environment_variables = @() }
-    scores = @{ plan_completeness = $null; security_coverage = $null; testability = $null; overall = $null; scored_at = $null }
-    approved_by = @()
-    decisions = @()
-} | ConvertTo-Json -Depth 10
-Set-Content -Path ".relay/plan-index.json" -Value $planIndex
+# Copy the canonical plan-index scaffold from the Relay plugin root
+$planIndexSource = Join-Path $relayRoot "schemas\plan-index.schema.json"
+if (-not (Test-Path $planIndexSource)) {
+  throw "Canonical plan-index scaffold not found at $planIndexSource"
+}
+Copy-Item -Path $planIndexSource -Destination ".relay/plan-index.json" -Force
 
 # Initialise execution log
 Set-Content -Path ".relay/execution-log.jsonl" -Value ""
@@ -102,7 +100,7 @@ ls .relay/
 
 Validate the Phase 0 scaffold before invoking Scout:
 ```powershell
-python scripts/relay-gate-check.py --phase 0
+python (Join-Path $relayRoot "scripts\relay-gate-check.py") --phase 0
 ```
 
 Log the initialisation:
