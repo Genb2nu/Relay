@@ -161,10 +161,17 @@ When the user invokes this command:
   `discovery`, `planning`, `review`, `adversarial`, `build`, `verify`, `complete`.
 
 3. Determine Scout's starting input.
-  - If `.relay/context-summary.md` exists or `context_loaded` is `true`, do NOT ask the user to restate the project brief. Read the summary first and pass it to Scout. Only ask the user for a short addendum if they want to add new goals or constraints since `/relay:load`.
-  - Otherwise ask the user for a one-paragraph project brief. Explain:
-    "Give me a one-paragraph brief describing what you want to build. Include: who will use it (personas), what they need to do, and any security-sensitive data. I'll hand this to Scout for discovery."
+   - If `.relay/context-summary.md` exists or `context_loaded` is `true`, do NOT ask the user to restate the project brief. Read the summary first and pass it to Scout. Only ask the user for a short addendum if they want to add new goals or constraints since `/relay:load`.
+   - Otherwise ask the user for a one-paragraph project brief. Explain:
+     "Give me a one-paragraph brief describing what you want to build. Include: who will use it (personas), what they need to do, and any security-sensitive data. I'll hand this to Scout for discovery."
 
 4. Invoke Scout with either:
-  - the `.relay/context-summary.md` contents plus any user addendum, or
-  - the one-paragraph brief from Step 3.
+   - the `.relay/context-summary.md` contents plus any user addendum, or
+   - the one-paragraph brief from Step 3.
+   - Explicitly tell Scout that the user is authorizing it to update `.relay/state.json` and create `docs/requirements.md` as required Relay discovery artifacts.
+
+5. After Scout returns, verify `docs/requirements.md` exists.
+   - If Scout returned full requirements content in the response but `docs/requirements.md` is missing, write that markdown to `docs/requirements.md` yourself.
+   - When you use this fallback, append a JSONL event to `.relay/execution-log.jsonl` with `agent: "conductor"`, `event: "requirements_fallback_written"`, and a UTC timestamp so the recovery is traceable.
+   - Apply any explicit `.relay/state.json` updates Scout returned (at minimum `publisher_prefix` and `environment_url`) if Scout described them but did not persist them.
+   - Do not treat discovery as complete until `docs/requirements.md` exists.

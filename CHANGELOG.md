@@ -4,6 +4,24 @@ All notable changes to Relay are documented here.
 
 ---
 
+## [0.6.4] — 2026-05-XX
+
+### Reliability
+- `.gitattributes` enforces LF for shell, Python, markdown, and JSON files
+- Shell scripts are normalized for Git Bash / Windows compatibility
+- Scout reads `.relay/context-summary.md` before asking users to restate the brief
+- `/relay:start` supports resume, reset, and cancel when `.relay/state.json` already exists
+- Scout explicitly treats `docs/requirements.md` as an authorized Relay discovery artifact
+- Conductor writes `docs/requirements.md` from Scout output when needed and logs the fallback in `.relay/execution-log.jsonl`
+
+### Validation
+- `tests/test-hooks.sh` now covers Scout writing `docs/requirements.md`
+
+### Release
+- Release metadata bumped to 0.6.4
+
+---
+
 ## [0.6.3] — 2026-05-XX
 
 ### Planning

@@ -98,6 +98,12 @@ pass "Stylist is restricted to its allowed docs output"
 run_pre_tool_case "conductor" "docs/test-report.md" 0
 pass "Conductor retains write access"
 
+run_pre_tool_case "scout" "docs/requirements.md" 0
+pass "Scout can write requirements"
+
+run_pre_tool_case "scout" "docs/plan.md" 2
+pass "Scout is restricted from non-requirements docs"
+
 run_pre_tool_case "forge-canvas" "src/canvas-apps/app.pa.yaml" 0
 pass "Forge-Canvas can write Canvas App source files"
 

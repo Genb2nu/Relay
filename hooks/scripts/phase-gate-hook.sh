@@ -15,8 +15,109 @@
 
 set -e
 
+json_python() {
+  if command -v python3 >/dev/null 2>&1; then
+    echo python3
+    return 0
+  fi
+
+  if command -v python >/dev/null 2>&1; then
+    echo python
+    return 0
+  fi
+
+  return 1
+}
+
+json_get_from_text() {
+  local json_input="$1"
+  local path="$2"
+  local default_value="$3"
+  local pybin
+
+  pybin=$(json_python) || {
+    echo "$default_value"
+    return 0
+  }
+
+  JSON_INPUT="$json_input" "$pybin" - "$path" "$default_value" <<'PY'
+import json
+import os
+import sys
+
+path = sys.argv[1]
+default_value = sys.argv[2]
+
+try:
+    data = json.loads(os.environ.get("JSON_INPUT", ""))
+except Exception:
+    print(default_value)
+    raise SystemExit(0)
+
+current = data
+for part in path.split("."):
+    if not part:
+        continue
+    if isinstance(current, dict) and part in current:
+        current = current[part]
+    else:
+        print(default_value)
+        raise SystemExit(0)
+
+if current is None:
+    print(default_value)
+elif isinstance(current, bool):
+    print("true" if current else "false")
+else:
+    print(current)
+PY
+}
+
+json_get_from_file() {
+  local file_path="$1"
+  local path="$2"
+  local default_value="$3"
+  local pybin
+
+  pybin=$(json_python) || {
+    echo "$default_value"
+    return 0
+  }
+
+  "$pybin" - "$file_path" "$path" "$default_value" <<'PY'
+import json
+import sys
+
+file_path, path, default_value = sys.argv[1:4]
+
+try:
+    with open(file_path, encoding="utf-8") as handle:
+        data = json.load(handle)
+except Exception:
+    print(default_value)
+    raise SystemExit(0)
+
+current = data
+for part in path.split("."):
+    if not part:
+        continue
+    if isinstance(current, dict) and part in current:
+        current = current[part]
+    else:
+        print(default_value)
+        raise SystemExit(0)
+
+if current is None:
+    print(default_value)
+elif isinstance(current, bool):
+    print("true" if current else "false")
+else:
+    print(current)
+PY
+}
+
 TOOL_INPUT=$(cat)
-COMMAND=$(echo "$TOOL_INPUT" | jq -r '.params.command // empty' 2>/dev/null)
+COMMAND=$(json_get_from_text "$TOOL_INPUT" "params.command" "")
 
 if [ -z "$COMMAND" ]; then
   exit 0
@@ -37,8 +138,8 @@ log_event() {
 BUILD_PATTERNS="pac solution create([[:space:]]|$)|pac solution import([[:space:]]|$)|pac dataverse table([[:space:]]|$)|pac dataverse column([[:space:]]|$)|pac admin list-role([[:space:]]|$)|pac plugin push([[:space:]]|$)|activate-flows\.ps1|dotnet build([[:space:]]|$)"
 if echo "$COMMAND" | grep -qE "$BUILD_PATTERNS"; then
   if [ -f "$PLAN_INDEX" ]; then
-    PLAN_LOCKED=$(jq -r '.phase_gates.phase4_adversarial.plan_locked // false' "$PLAN_INDEX" 2>/dev/null)
-    PHASE4_PASSED=$(jq -r '.phase_gates.phase4_adversarial.passed // false' "$PLAN_INDEX" 2>/dev/null)
+    PLAN_LOCKED=$(json_get_from_file "$PLAN_INDEX" "phase_gates.phase4_adversarial.plan_locked" "false")
+    PHASE4_PASSED=$(json_get_from_file "$PLAN_INDEX" "phase_gates.phase4_adversarial.passed" "false")
 
     if [ "$PLAN_LOCKED" != "true" ] || [ "$PHASE4_PASSED" != "true" ]; then
       echo "" >&2
@@ -57,7 +158,7 @@ fi
 VERIFY_PATTERNS="relay-drift-check|security-tests.ps1|sentinel"
 if echo "$COMMAND" | grep -qE "$VERIFY_PATTERNS"; then
   if [ -f "$PLAN_INDEX" ]; then
-    PHASE5_PASSED=$(jq -r '.phase_gates.phase5_build.passed // false' "$PLAN_INDEX" 2>/dev/null)
+    PHASE5_PASSED=$(json_get_from_file "$PLAN_INDEX" "phase_gates.phase5_build.passed" "false")
 
     if [ "$PHASE5_PASSED" != "true" ]; then
       echo "" >&2
@@ -73,9 +174,9 @@ fi
 # --- Gate: Phase 6 must be complete before any solution export ---
 if echo "$COMMAND" | grep -qE "pac solution export([[:space:]]|$)"; then
   if [ -f "$PLAN_INDEX" ]; then
-    PHASE6_PASSED=$(jq -r '.phase_gates.phase6_verify.passed // false' "$PLAN_INDEX" 2>/dev/null)
-    SENTINEL=$(jq -r '.phase_gates.phase6_verify.sentinel_approved // false' "$PLAN_INDEX" 2>/dev/null)
-    WARDEN=$(jq -r '.phase_gates.phase6_verify.warden_approved // false' "$PLAN_INDEX" 2>/dev/null)
+    PHASE6_PASSED=$(json_get_from_file "$PLAN_INDEX" "phase_gates.phase6_verify.passed" "false")
+    SENTINEL=$(json_get_from_file "$PLAN_INDEX" "phase_gates.phase6_verify.sentinel_approved" "false")
+    WARDEN=$(json_get_from_file "$PLAN_INDEX" "phase_gates.phase6_verify.warden_approved" "false")
 
     if [ "$PHASE6_PASSED" != "true" ]; then
       echo "" >&2

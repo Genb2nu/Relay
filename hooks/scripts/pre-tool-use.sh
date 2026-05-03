@@ -16,6 +16,107 @@ set -e
 
 WORKSPACE_ROOT=$(pwd -P)
 
+json_python() {
+  if command -v python3 >/dev/null 2>&1; then
+    echo python3
+    return 0
+  fi
+
+  if command -v python >/dev/null 2>&1; then
+    echo python
+    return 0
+  fi
+
+  return 1
+}
+
+json_get_from_text() {
+  local json_input="$1"
+  local path="$2"
+  local default_value="$3"
+  local pybin
+
+  pybin=$(json_python) || {
+    echo "$default_value"
+    return 0
+  }
+
+  JSON_INPUT="$json_input" "$pybin" - "$path" "$default_value" <<'PY'
+import json
+import os
+import sys
+
+path = sys.argv[1]
+default_value = sys.argv[2]
+
+try:
+    data = json.loads(os.environ.get("JSON_INPUT", ""))
+except Exception:
+    print(default_value)
+    raise SystemExit(0)
+
+current = data
+for part in path.split("."):
+    if not part:
+        continue
+    if isinstance(current, dict) and part in current:
+        current = current[part]
+    else:
+        print(default_value)
+        raise SystemExit(0)
+
+if current is None:
+    print(default_value)
+elif isinstance(current, bool):
+    print("true" if current else "false")
+else:
+    print(current)
+PY
+}
+
+json_get_from_file() {
+  local file_path="$1"
+  local path="$2"
+  local default_value="$3"
+  local pybin
+
+  pybin=$(json_python) || {
+    echo "$default_value"
+    return 0
+  }
+
+  "$pybin" - "$file_path" "$path" "$default_value" <<'PY'
+import json
+import sys
+
+file_path, path, default_value = sys.argv[1:4]
+
+try:
+    with open(file_path, encoding="utf-8") as handle:
+        data = json.load(handle)
+except Exception:
+    print(default_value)
+    raise SystemExit(0)
+
+current = data
+for part in path.split("."):
+    if not part:
+        continue
+    if isinstance(current, dict) and part in current:
+        current = current[part]
+    else:
+        print(default_value)
+        raise SystemExit(0)
+
+if current is None:
+    print(default_value)
+elif isinstance(current, bool):
+    print("true" if current else "false")
+else:
+    print(current)
+PY
+}
+
 canonicalize_path() {
   local raw_path="$1"
   local base_dir="$2"
@@ -80,7 +181,10 @@ path_is_ps1_in_dir() {
 TOOL_INPUT=$(cat)
 
 # Extract the file path being written to
-FILE_PATH=$(echo "$TOOL_INPUT" | jq -r '.params.file_path // .params.path // empty' 2>/dev/null)
+FILE_PATH=$(json_get_from_text "$TOOL_INPUT" "params.file_path" "")
+if [ -z "$FILE_PATH" ]; then
+  FILE_PATH=$(json_get_from_text "$TOOL_INPUT" "params.path" "")
+fi
 
 # If no file path, this isn't a write operation we care about — allow
 if [ -z "$FILE_PATH" ]; then
@@ -116,7 +220,7 @@ APPLY_MDA_SITEMAP_PATH=$(canonicalize_path "scripts/apply-mda-sitemap.ps1" "$WOR
 # --- Check 1: Plan Lock ---
 if [ -f "$STATE_FILE" ]; then
   if path_is "$CANONICAL_PATH" "$PLAN_PATH"; then
-    CHECKSUM=$(jq -r '.plan_checksum // empty' "$STATE_FILE" 2>/dev/null)
+    CHECKSUM=$(json_get_from_file "$STATE_FILE" "plan_checksum" "")
     if [ -n "$CHECKSUM" ]; then
       echo "BLOCKED: docs/plan.md is locked (checksum: $CHECKSUM). Use /relay:plan-review to unlock and re-review." >&2
       exit 2
@@ -124,7 +228,7 @@ if [ -f "$STATE_FILE" ]; then
   fi
 
   if path_is "$CANONICAL_PATH" "$SECURITY_DESIGN_PATH"; then
-    CHECKSUM=$(jq -r '.security_design_checksum // empty' "$STATE_FILE" 2>/dev/null)
+    CHECKSUM=$(json_get_from_file "$STATE_FILE" "security_design_checksum" "")
     if [ -n "$CHECKSUM" ]; then
       echo "BLOCKED: docs/security-design.md is locked (checksum: $CHECKSUM). Use /relay:plan-review to unlock and re-review." >&2
       exit 2
