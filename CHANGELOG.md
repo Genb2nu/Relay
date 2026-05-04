@@ -4,6 +4,33 @@ All notable changes to Relay are documented here.
 
 ---
 
+## [0.6.5] — 2026-05-XX
+
+### Workflow
+- Phase 2b wireframes are reinforced as a mandatory planning substep before Phase 3 review
+- Phase 5 workflow now explicitly continues from Vault + Stylist into all applicable Forge specialists
+- Phase 5 completion contract now tracks specialist completion flags and solution component linkage
+
+### Build Reliability
+- Vault guidance now requires `MSCRM.SolutionUniqueName` on Dataverse metadata calls so created components are linked to the custom solution
+- Dataverse schema guidance now documents the working Web API payload patterns surfaced by smoke testing
+- Vault hook permissions now allow `src/dataverse/` artifacts and Relay build state updates
+
+### Agent Coordination
+- Scout, Drafter, Critic, and Stylist write permissions/state contracts were aligned with the artifacts they are required to produce
+- Forge-Canvas now treats Checklist A and the coauthoring/app bootstrap prompt as a hard first step
+- Critic can update adversarial gate state in `.relay/plan-index.json`
+
+### Validation
+- `tests/test-hooks.sh` now covers Scout state writes, Drafter plan-index writes, Critic plan-index writes, and Vault dataverse artifact writes
+- Phase 1 gate now requires `docs/requirements.md`, not just discovery counts in `.relay/plan-index.json`
+- Phase 5 gate now requires actual Canvas App and Model-Driven App source artifacts before specialist completion flags can pass
+
+### Release
+- Release metadata bumped to 0.6.5
+
+---
+
 ## [0.6.4] — 2026-05-XX
 
 ### Reliability

@@ -83,8 +83,10 @@ if ($errors.Count -gt 0) {
 Write to `.relay/plan-index.json`:
 ```json
 {
-  "phase5_build": {
-    "mda_complete": true|false
+  "phase_gates": {
+    "phase5_build": {
+      "forge_mda_complete": true|false
+    }
   }
 }
 ```

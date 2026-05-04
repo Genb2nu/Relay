@@ -64,8 +64,10 @@ Wait for user to confirm "ready" before proceeding.
 Write to `.relay/plan-index.json`:
 ```json
 {
-  "phase5_build": {
-    "power_pages_complete": true|false
+  "phase_gates": {
+    "phase5_build": {
+      "forge_pages_complete": true|false
+    }
   }
 }
 ```

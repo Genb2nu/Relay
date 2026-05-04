@@ -76,14 +76,14 @@ tools:
 
 | Agent | Can write to |
 |---|---|
-| Scout | `docs/requirements.md` only |
-| Drafter | `docs/plan.md`, `docs/security-design.md` |
+| Scout | `docs/requirements.md`, `.relay/state.json`, `.relay/plan-index.json` |
+| Drafter | `docs/plan.md`, `docs/security-design.md`, `docs/plan-scores.md`, `.relay/plan-index.json` |
 | Auditor | Nothing (read-only) |
 | Warden | `docs/security-design.md`, `docs/security-test-report.md` |
-| Critic | `docs/critic-report.md` only |
+| Critic | `docs/critic-report.md`, `.relay/plan-index.json` |
 | Stylist | `docs/design-system.md`, `docs/design-review.md`, `docs/wireframes.html`, `.relay/plan-index.json` |
 | Analyst | `docs/existing-solution.md` |
-| Vault | `scripts/*.ps1`, `src/solution/` |
+| Vault | `src/dataverse/`, `scripts/*.ps1`, `src/solution/`, `.relay/state.json`, `.relay/plan-index.json`, `.relay/execution-log.jsonl` |
 | Forge | `src/plugins/`, `src/webresources/`, `src/pcf/`, `scripts/` |
 | Forge-Canvas | `src/canvas-apps/`, `docs/canvas-app-instructions.md`, `.relay/plan-index.json`, `.relay/execution-log.jsonl` |
 | Forge-MDA | `src/mda/`, `scripts/apply-mda-sitemap.ps1`, `.relay/plan-index.json`, `.relay/execution-log.jsonl` |

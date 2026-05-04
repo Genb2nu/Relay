@@ -33,12 +33,12 @@ $headers = @{
     "Content-Type"   = "application/json"
     "OData-Version"  = "4.0"
     "Prefer"         = "return=representation"
-    "MSCRM.SolutionName" = "<SolutionLogicalName>"  # Adds to solution automatically
+    "MSCRM.SolutionUniqueName" = "<SolutionUniqueName>"  # Adds to solution automatically
 }
 ```
 
-**CRITICAL:** Always include `MSCRM.SolutionName` header — this ensures the component
-is added to your solution. Without it, the component goes to the Default Solution.
+**CRITICAL:** Always include `MSCRM.SolutionUniqueName` on metadata create/update calls.
+Without it, the component can land outside your custom solution.
 
 ---
 
@@ -81,6 +81,8 @@ $tableBody = @{
         @{
             "@odata.type"  = "Microsoft.Dynamics.CRM.StringAttributeMetadata"
             SchemaName     = "<Prefix>_Name"
+            AttributeType  = "String"
+            AttributeTypeName = @{ Value = "StringType" }
             RequiredLevel  = @{ Value = "ApplicationRequired" }
             MaxLength      = 200
             DisplayName    = @{
@@ -92,6 +94,7 @@ $tableBody = @{
                 })
             }
             IsPrimaryName  = $true
+            FormatName     = @{ Value = "Text" }
         }
     )
 } | ConvertTo-Json -Depth 10
@@ -179,7 +182,8 @@ $body = @{
 ```
 
 ### Lookup Column (via Relationship)
-Lookup columns are created by creating a relationship — see Relationships section below.
+Create ALL tables first, then create lookup relationships after every referenced table exists.
+Do not embed nested relationship metadata inside a lookup attribute POST to `/Attributes`.
 
 ---
 
@@ -201,6 +205,9 @@ $body = @{
         Unshare  = "NoCascade"
     }
     Lookup = @{
+        "@odata.type" = "Microsoft.Dynamics.CRM.LookupAttributeMetadata"
+        AttributeType = "Lookup"
+        AttributeTypeName = @{ Value = "LookupType" }
         SchemaName    = "<Prefix>_<ParentTable>Id"
         RequiredLevel = @{ Value = "None" }
         DisplayName   = @{ "@odata.type" = "Microsoft.Dynamics.CRM.Label"; LocalizedLabels = @(@{ "@odata.type" = "Microsoft.Dynamics.CRM.LocalizedLabel"; Label = "<Parent Display Name>"; LanguageCode = 1033 }) }
@@ -268,6 +275,34 @@ Invoke-RestMethod -Method POST -Uri "$orgUrl/api/data/v9.2/PublishXml" `
 # Publish ALL customizations (slower but safe)
 Invoke-RestMethod -Method POST -Uri "$orgUrl/api/data/v9.2/PublishAllXml" -Headers $headers
 ```
+
+---
+
+## Relay-specific build safety rules
+
+```powershell
+# PowerShell 5.1-compatible assignment
+if ([string]::IsNullOrWhiteSpace($orgUrl)) {
+    $orgUrl = $state.environment_url
+}
+
+# Wait briefly after each table create before querying metadata
+Invoke-RestMethod -Method POST -Uri "$orgUrl/api/data/v9.2/EntityDefinitions" -Headers $headers -Body $tableBody -ContentType "application/json" | Out-Null
+Start-Sleep -Seconds 3
+
+# Role privilege assignment must use enum depth names
+$privileges = @(
+    @{ PrivilegeId = "<guid>"; Depth = "Basic" },
+    @{ PrivilegeId = "<guid>"; Depth = "Global" }
+)
+Invoke-RestMethod -Method POST `
+    -Uri "$orgUrl/api/data/v9.2/roles(<role-id>)/Microsoft.Dynamics.CRM.AddPrivilegesRole" `
+    -Headers $headers -Body (@{ Privileges = $privileges } | ConvertTo-Json -Depth 10) -ContentType "application/json"
+```
+
+- Organization-owned tables can only receive `Global` privilege depth.
+- Integer / Decimal attribute payloads must omit unsupported `DefaultValue`.
+- Decimal attribute payloads must omit `Scale`.
 
 ---
 

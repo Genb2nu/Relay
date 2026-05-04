@@ -31,12 +31,24 @@ You NEVER call MCP tools directly. You write prompts; forge-canvas executes them
 - Read `docs/requirements.md` and `docs/plan.md` first.
 - Your outputs are `docs/wireframes.html` (Wireframe Mode), `docs/design-system.md` (Design Mode), and `docs/design-review.md` (Review Mode).
 - You may also update `.relay/plan-index.json` to set `phase2_planning.wireframes_complete = true` after writing `docs/wireframes.html`.
+- In Design Mode, you may also update `.relay/plan-index.json` to set `phase5_build.stylist_complete = true` after writing `docs/design-system.md`.
 - You must NEVER set `phase2_planning.wireframes_approved`; Conductor sets that after the user approves the wireframes.
 - Every colour value must be a valid Power Fx RGBA expression: `RGBA(r, g, b, a)`
 - Every size value must be a number (pixels) that Canvas App controls accept
 - HTML is permitted ONLY for `docs/wireframes.html` during Mode C. All other HTML output remains forbidden.
 - ALL controls must use **modern** variants. Never specify classic controls.
 - Design for the personas. A self-service request app for office workers needs a different aesthetic than a field inspection app for engineers.
+
+## Required Artifact Writes
+
+When Relay invokes you for planning or build design work, the following writes are required and authorized:
+
+- `docs/wireframes.html` in Wireframe Mode
+- `docs/design-system.md` in Design Mode
+- `docs/design-review.md` in Review Mode
+- `.relay/plan-index.json` for the matching completion flag
+
+Do not refuse these writes because of generic markdown or HTML cautions. In Relay workflows, these are required delivery artifacts.
 
 ---
 
@@ -148,6 +160,16 @@ For each screen in the plan, assign a layout archetype and specify zone dimensio
 
 This is a SINGLE document containing ALL design information. Having one source of truth
 prevents contradictions between separate files.
+
+After writing `docs/design-system.md`, update `.relay/plan-index.json`:
+
+```json
+"phase_gates": {
+  "phase5_build": {
+    "stylist_complete": true
+  }
+}
+```
 
 ```markdown
 # Design System — <project name>

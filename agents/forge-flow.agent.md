@@ -99,9 +99,11 @@ Always document the 2 remaining manual steps:
 Write to `.relay/plan-index.json`:
 ```json
 {
-  "phase5_build": {
-    "flows_documented": true|false,
-    "flow_count": <N>
+  "phase_gates": {
+    "phase5_build": {
+      "forge_flow_complete": true|false,
+      "flow_count": <N>
+    }
   }
 }
 ```

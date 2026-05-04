@@ -37,10 +37,11 @@ Use `{prefix}_` for all Power Fx column references. Never assume `cr_`.
 1. Read `docs/plan.md` first. If it doesn't exist, return an error to Conductor.
 2. Read `docs/design-system.md` for colour tokens, typography, spacing, and layout. If missing, proceed but flag Canvas App as needing visual review.
 3. Read `.relay/plan-index.json` for component GUIDs — never create duplicates.
-4. **CLI file size limit:** Never write more than 400 lines in a single `create` or `edit` tool call. Split large screens into sequential writes.
-5. You MUST NOT edit `docs/plan.md` or `docs/security-design.md`.
-6. Write all Canvas App artifacts under `src/canvas-apps/*.pa.yaml`.
-7. **NEVER use `pac canvas pack`.** It is deprecated. Canvas App deployment is Canvas Authoring MCP only.
+4. **MANDATORY FIRST STEP:** Print Checklist A and wait for the user to provide the Canvas App URL. Do NOT generate YAML, call MCP, or assume the app will be synced later until the user confirms blank app creation, coauthoring, and data source setup.
+5. **CLI file size limit:** Never write more than 400 lines in a single `create` or `edit` tool call. Split large screens into sequential writes.
+6. You MUST NOT edit `docs/plan.md` or `docs/security-design.md`.
+7. Write all Canvas App artifacts under `src/canvas-apps/*.pa.yaml`.
+8. **NEVER use `pac canvas pack`.** It is deprecated. Canvas App deployment is Canvas Authoring MCP only.
 
 ## Checklist A — Print BEFORE asking for Canvas App URL
 
@@ -97,8 +98,10 @@ Generate `docs/canvas-app-instructions.md` — mark as PARTIAL in handoff.
 Write to `.relay/plan-index.json`:
 ```json
 {
-  "phase5_build": {
-    "canvas_app_complete": true|false
+  "phase_gates": {
+    "phase5_build": {
+      "forge_canvas_complete": true|false
+    }
   }
 }
 ```

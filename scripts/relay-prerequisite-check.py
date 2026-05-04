@@ -376,16 +376,10 @@ def check_skills(relay_root=None):
     """Check that all required SKILL.md files exist."""
     results = []
 
-    # Try to find the skills/ directory
     search_paths = []
     if relay_root:
         search_paths.append(Path(relay_root) / "skills")
     search_paths.append(PLUGIN_ROOT / "skills")
-    # Check common locations
-    search_paths.append(Path("skills"))
-    # Check parent if we're in a sandbox
-    search_paths.append(Path("..") / "skills")
-    search_paths.append(Path("../..") / "skills")
 
     skills_dir = None
     for p in search_paths:
@@ -398,7 +392,7 @@ def check_skills(relay_root=None):
             "check": "skills:directory",
             "status": "FAIL",
             "message": "skills/ directory not found",
-            "remediation": "Ensure you are running from the Relay plugin root or a project within it",
+            "remediation": "Ensure the Relay plugin installation is intact and relay_root points to the plugin root if you are overriding it",
             "critical": False,
         }]
 

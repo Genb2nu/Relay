@@ -101,8 +101,23 @@ pass "Conductor retains write access"
 run_pre_tool_case "scout" "docs/requirements.md" 0
 pass "Scout can write requirements"
 
+run_pre_tool_case "scout" ".relay/state.json" 0
+pass "Scout can update state"
+
+run_pre_tool_case "scout" ".relay/plan-index.json" 0
+pass "Scout can update plan-index"
+
 run_pre_tool_case "scout" "docs/plan.md" 2
 pass "Scout is restricted from non-requirements docs"
+
+run_pre_tool_case "drafter" "docs/plan-scores.md" 0
+pass "Drafter can write plan scores"
+
+run_pre_tool_case "drafter" ".relay/plan-index.json" 0
+pass "Drafter can update plan-index"
+
+run_pre_tool_case "critic" ".relay/plan-index.json" 0
+pass "Critic can update plan-index"
 
 run_pre_tool_case "forge-canvas" "src/canvas-apps/app.pa.yaml" 0
 pass "Forge-Canvas can write Canvas App source files"
@@ -127,6 +142,15 @@ pass "Forge-Pages can write portal source files"
 
 run_pre_tool_case "forge-pages" ".relay/plan-index.json" 0
 pass "Forge-Pages can update plan-index"
+
+run_pre_tool_case "vault" "src/dataverse/create-schema.ps1" 0
+pass "Vault can write Dataverse build scripts"
+
+run_pre_tool_case "vault" ".relay/state.json" 0
+pass "Vault can update state"
+
+run_pre_tool_case "vault" ".relay/plan-index.json" 0
+pass "Vault can update plan-index"
 
 run_phase_gate_case false false 2
 pass "pac solution import is blocked before Phase 4 completion"

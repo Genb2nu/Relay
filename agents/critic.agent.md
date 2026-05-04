@@ -92,7 +92,7 @@ Adversarial findings: <N> (critical: <N>, major: <N>, minor: <N>)
 
 ## Rules
 
-- You may write ONLY to `docs/critic-report.md`. No other files. You are read-only everywhere else.
+- You may write ONLY to `docs/critic-report.md` and `.relay/plan-index.json`.
 - You do NOT fix problems. You find them. Drafter and Warden fix them.
 - If the checklist passes cleanly and you have no adversarial findings, approve immediately. Don't invent problems to justify your existence.
 - If you're unsure whether something is a real issue or a style preference, flag it as **minor** — let Drafter decide.
@@ -100,17 +100,17 @@ Adversarial findings: <N> (critical: <N>, major: <N>, minor: <N>)
 
 ## plan-index.json Output Contract (MANDATORY)
 
-Include these values in your handoff so Conductor can write them to `.relay/plan-index.json`:
+Write these values to `.relay/plan-index.json` (or include them in your handoff so Conductor can write them immediately if direct state update is unavailable):
 
 ```json
 {
   "phase_gates": {
     "phase4_adversarial": {
       "critic_approved": true,
-      "checklist_passed": 20,
-      "checklist_failed": 0,
-      "checklist_na": 3,
-      "adversarial_findings": 0,
+      "checklist_items_total": 23,
+      "checklist_items_passed": 23,
+      "blocking_issues_found": 0,
+      "blocking_issues_resolved": 0,
       "plan_locked": true,
       "plan_checksum": "<sha256 of plan.md>",
       "security_design_checksum": "<sha256 of security-design.md>",

@@ -4,7 +4,7 @@ A plugin-native SDLC orchestration system for Microsoft Power Platform. Ten spec
 
 Works on **Claude Code**, **GitHub Copilot CLI**, and **Copilot in VS Code**.
 
-> **v0.6.3** — Stylist wireframe substep · user approval gate before Phase 3 · wireframe consistency enforcement
+> **v0.6.5** — `/relay:start` prerequisite + resume/reset flow · mandatory Phase 2b wireframes · solution-linked Phase 5 build · artifact-enforced Phase 1/5 gates
 
 ---
 
@@ -19,7 +19,7 @@ You describe what you want to build. Relay runs a squad of specialists through a
 | Plan Reviewer | **Auditor** | Completeness review — loops with Drafter until approved |
 | Security Architect | **Warden** | Security review + runtime API security tests post-build |
 | Adversarial Reviewer | **Critic** | 23-item footgun checklist + red-team pass before lock |
-| UI Designer | **Stylist** | Canvas App design system — RGBA tokens, typography, spacing |
+| UI Designer | **Stylist** | Wireframes + Canvas App design system — RGBA tokens, typography, spacing |
 | Solution Mapper | **Analyst** | Maps existing solutions before change requests or audits |
 | Dataverse Engineer | **Vault** | Tables, columns, security roles, FLS profiles, plugins |
 | Canvas App Developer | **Forge-Canvas** | Canvas App screens via Canvas Authoring MCP |
@@ -29,7 +29,7 @@ You describe what you want to build. Relay runs a squad of specialists through a
 | Developer | **Forge** | Plugins, code apps, web resources, env vars |
 | Tester | **Sentinel** | Functional verification + drift detection (plan vs actual build) |
 
-**Workflow:** discovery → planning → review → adversarial → build → verify → complete
+**Workflow:** discovery → planning (plan + wireframes) → review → adversarial → build → verify → complete
 
 Every phase transition is gate-validated. The plan locks with SHA256 checksums after three independent reviewers approve. Security is tested at runtime, not just reviewed on paper.
 
@@ -118,7 +118,12 @@ claude --plugin-dir /path/to/Relay      # Claude Code
 copilot --plugin-dir /path/to/Relay     # Copilot CLI
 ```
 
-Run `tests/test-hooks.sh` to verify hook enforcement.
+Run the local regression checks before releasing changes:
+
+```bash
+python tests/test-gates.py
+bash tests/test-hooks.sh
+```
 
 ### After installing
 ```
@@ -133,6 +138,8 @@ Verifies all prerequisites: PAC CLI, Azure CLI, Python, Node.js, Git, Bash, jq, 
 ```
 /relay:start
 ```
+
+If `.relay/state.json` already exists, Relay offers **Resume**, **Reset**, or **Cancel** instead of silently overwriting project state.
 
 Provide a brief:
 
@@ -176,28 +183,33 @@ Watch the squad work.
 ```
 YOU ──► Conductor
           │
-       Scout ──────────► docs/requirements.md
-          │
-       Drafter ─────────► docs/plan.md + docs/security-design.md
-          │               .relay/plan-index.json (machine contract)
-          │               docs/plan-scores.md (quality scores)
-          │
-       Auditor ─┐        parallel review → loop until BOTH approve
-       Warden  ─┘
-          │
-       Critic ───────────► 23-item footgun checklist + adversarial pass
-          │
-       ▼ PLAN LOCKED (SHA256 + hook enforcement) ▼
-          │
+       Scout ──────────► docs/requirements.md + state updates
+           │
+        Drafter ─────────► docs/plan.md + docs/security-design.md
+           │               .relay/plan-index.json (machine contract)
+           │               docs/plan-scores.md (quality scores)
+           │
+       Stylist (Mode C) ─► docs/wireframes.html
+           │
+       USER APPROVES WIREFRAMES
+           │
+        Auditor ─┐        parallel review → loop until BOTH approve
+        Warden  ─┘
+           │
+        Critic ───────────► 23-item footgun checklist + adversarial pass
+           │
+        ▼ PLAN LOCKED (SHA256 + hook enforcement) ▼
+           │
        Vault  ─┐          schema + design system (parallel)
        Stylist ─┘
-          │
-       Forge (Canvas App) ──► Canvas Authoring MCP
-       Forge (MDA)        ──► Dataverse API sitemap XML
-       Forge (Flows)      ──► PAC CLI import + clientdata PATCH activation
-          │
-       Sentinel ─┐         drift detection + security API tests (parallel)
-       Warden   ─┘
+           │
+       Forge-Canvas ───────► Checklist A → Canvas Authoring MCP → src/canvas-apps/*.pa.yaml
+       Forge-MDA ──────────► Dataverse API sitemap/forms + src/mda/ + apply script
+       Forge-Flow ─────────► docs/flow-build-guide.md
+       Forge / Forge-Pages ─► plugins, code apps, portals when present
+           │
+        Sentinel ─┐         drift detection + security API tests (parallel)
+        Warden   ─┘
           │
        Conductor ────────► summary to YOU + export command
 ```
@@ -217,6 +229,11 @@ Phase 3 — Plan Review
   @warden.agent   ──► reviews plan.md + security-design.md for security gaps
   (both run simultaneously, both must approve before Phase 4)
 
+Phase 2b — Wireframes
+/fleet
+  @stylist.agent  ──► builds docs/wireframes.html
+  (user approval required before Phase 3)
+
 Phase 5a — Schema + Design (no dependency between them)
 /fleet
   @vault.agent    ──► builds Dataverse schema, roles, FLS, env vars
@@ -224,9 +241,9 @@ Phase 5a — Schema + Design (no dependency between them)
 
 Phase 5b — Apps + Flows (all read schema, write to different targets)
 /fleet
-  @forge.agent    ──► Canvas App via Canvas Authoring MCP
-  @forge.agent    ──► MDA sitemap XML via Dataverse API
-  @forge.agent    ──► 6 flows JSON + pac solution import + activation
+  @forge-canvas.agent ──► Checklist A + Canvas App YAML + MCP sync
+  @forge-mda.agent    ──► MDA sitemap XML + form deployment
+  @forge-flow.agent   ──► flow build guide + connection reference guidance
 
 Phase 5b — Inline verification (immediately after each build stream)
 /fleet
@@ -269,8 +286,9 @@ Analyst ────────────► docs/existing-solution.md (must 
 
 ```
 Phase 3:  /fleet @auditor.agent + @warden.agent  (parallel review)
+Phase 2b: /fleet @stylist.agent                    (wireframes before review)
 Phase 5a: /fleet @vault.agent + @stylist.agent    (schema + design)
-Phase 5b: /fleet @forge.agent ×3                  (Canvas + MDA + Flows)
+Phase 5b: /fleet @forge-canvas.agent + @forge-mda.agent + @forge-flow.agent + @forge-pages.agent (when needed)
 Phase 6:  /fleet @sentinel.agent + @warden.agent  (verify + security test)
 ```
 
@@ -284,6 +302,13 @@ Phase 6:  /fleet @sentinel.agent + @warden.agent  (verify + security test)
 `hooks/scripts/phase-gate-hook.sh` intercepts Bash tool calls — build commands are blocked by exit code 2 if the plan isn't locked, regardless of LLM instructions.
 
 `scripts/relay-consistency-check.py` cross-validates plan-index.json claims against actual doc content — catching agents that write optimistic values without backing them in the plan.
+
+Current hard checks include:
+
+- **Phase 1:** `docs/requirements.md` must exist and discovery counts must meet the minimum bar
+- **Phase 2:** `docs/plan.md`, `docs/security-design.md`, and `docs/wireframes.html` must exist, and wireframes must be approved
+- **Phase 5:** Vault must link solution-backed artifacts to the custom solution, and Canvas / MDA / Power Pages builds must leave real source artifacts in `src/`
+- **Phase 5 nuance:** flow-only/manual-build scenarios can pass with a flow guide, but solution-backed artifacts still require linked solution components and the correct specialist outputs
 
 ---
 
@@ -305,10 +330,12 @@ Sentinel generates and runs Playwright TypeScript tests using Microsoft's offici
 |---|---|
 | `.relay/plan-index.json` | Machine-readable contract — phase gate status, component inventory, quality scores |
 | `.relay/execution-log.jsonl` | Structured log of every agent action — powers `/relay:status` |
+| `scripts/relay-prerequisite-check.py` | Validates tools, auth, plugins, skills, and MCP before `/relay:start` scaffolds anything |
 | `scripts/relay-gate-check.py` | Validates gate conditions before phase advancement |
 | `scripts/relay-consistency-check.py` | Cross-validates plan-index claims against plan.md |
 | `scripts/relay-drift-check.py` | Compares plan-index components against actual Dataverse (table existence + column counts) |
 | `scripts/relay-score.py` | Scores plan completeness (40%) + security (40%) + testability (20%) |
+| `tests/test-gates.py` | Regression tests for Phase 1 and Phase 5 gate enforcement |
 | `scripts/security-tests.ps1` | Generated by Warden — real API tests post-build |
 | `tests/*.test.ts` | Generated by Sentinel — Playwright E2E for Canvas + MDA |
 | `hooks/scripts/phase-gate-hook.sh` | Intercepts Bash tool calls to enforce gate conditions |
@@ -434,7 +461,21 @@ Fixes from early project validation:
 - Canvas App design reading skill + enterprise layout as named reference pattern
 - All v0.3.2 pilot fixes included
 
-### v0.5.2 (current)
+### v0.6.5 (current)
+- **Phase 1 artifact enforcement** — discovery cannot pass without a real `docs/requirements.md`
+- **Phase 5 artifact enforcement** — Canvas, MDA, and Power Pages specialist flags do not pass without actual `src/canvas-apps/*.pa.yaml`, `src/mda/*.xml`, `scripts/apply-mda-sitemap.ps1`, and `src/pages/` output
+- **Solution-linked build contract** — Vault must add metadata to the custom solution and Phase 5 checks linked component count
+- **Forge specialist split clarified** — README, gate logic, and agent contracts now consistently describe Forge-Canvas, Forge-MDA, Forge-Flow, Forge-Pages, and Forge
+- **Gate regression suite** — `tests/test-gates.py` covers the shadow-test gaps that previously slipped through
+
+### v0.6.4
+- **`/relay:start` resume/reset/cancel** — existing `.relay/state.json` is respected instead of being overwritten
+- **Scout fallback artifact recovery** — Conductor writes `docs/requirements.md` and logs the fallback if Scout returns content without persisting the file
+- **Context-aware discovery** — `/relay:start` reuses `.relay/context-summary.md` from `/relay:load`
+- **Prerequisite check alignment** — skills are resolved from the Relay plugin root, not guessed from the current working directory
+- **Expanded hook contracts** — Scout, Drafter, Critic, and Vault permissions align with the artifacts they are expected to write
+
+### v0.5.2
 - **Deny-by-default write hook** — `CLAUDE_AGENT` must be explicit and known before writes are allowed
 - **Full-path enforcement** — hook restrictions now compare canonical workspace paths, not basenames
 - **Stylist + Analyst enforcement** — both agents now have explicit write restrictions in `pre-tool-use.sh`

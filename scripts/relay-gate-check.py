@@ -33,6 +33,7 @@ STATE_PATH = ".relay/state.json"
 STATE_SCHEMA_PATH = os.path.join(PLUGIN_ROOT, "schemas", "state.schema.json")
 LOG_PATH = ".relay/execution-log.jsonl"
 WIREFRAMES_PATH = "docs/wireframes.html"
+REQUIREMENTS_PATH = "docs/requirements.md"
 CONSISTENCY_CHECK_PATH = os.path.join(SCRIPT_DIR, "relay-consistency-check.py")
 
 
@@ -163,6 +164,11 @@ def check_phase1(pi):
     gate = pi["phase_gates"]["phase1_discovery"]
     errors = []
 
+    if not os.path.exists(REQUIREMENTS_PATH):
+        errors.append("docs/requirements.md does not exist")
+    elif os.path.getsize(REQUIREMENTS_PATH) == 0:
+        errors.append("docs/requirements.md is empty")
+
     if gate["persona_count"] < 2:
         errors.append(f"Too few personas: {gate['persona_count']} (minimum 2)")
     if gate["user_story_count"] < 5:
@@ -254,17 +260,46 @@ def check_phase5(pi):
     gate = pi["phase_gates"]["phase5_build"]
     errors = []
     components = pi.get("components", {})
+    canvas_complete = gate.get("forge_canvas_complete", gate.get("canvas_app_complete", False))
+    mda_complete = gate.get("forge_mda_complete", gate.get("mda_complete", False))
+    flow_complete = gate.get("forge_flow_complete", gate.get("flows_documented", False))
+    pages_complete = gate.get("forge_pages_complete", gate.get("power_pages_complete", False))
+    forge_complete = gate.get("forge_complete", False)
+    solution_component_count = gate.get("solution_component_count", 0)
+    forge_owned_components = any(
+        components.get(key)
+        for key in ("plugins", "environment_variables")
+    )
+    solution_backed_components = any(
+        components.get(key)
+        for key in (
+            "tables",
+            "security_roles",
+            "fls_profiles",
+            "connection_references",
+            "environment_variables",
+            "plugins",
+            "canvas_apps",
+            "model_driven_apps",
+        )
+    )
 
     if not gate["vault_complete"]:
         errors.append("Vault has not completed schema build")
-    if components.get("canvas_apps") and not gate.get("canvas_app_complete", False):
+    if solution_backed_components and solution_component_count <= 0:
+        errors.append("Solution contains 0 linked components — Vault must add metadata to the custom solution before Phase 5 passes")
+    if not gate.get("stylist_complete", False):
+        errors.append("Stylist has not completed the design-system artifact")
+    if components.get("canvas_apps") and not canvas_complete:
         errors.append("Canvas App in plan but forge-canvas has not completed")
-    if components.get("model_driven_apps") and not gate.get("mda_complete", False):
+    if components.get("model_driven_apps") and not mda_complete:
         errors.append("Model-Driven App in plan but forge-mda has not completed")
-    if components.get("flows") and not gate.get("flows_documented", False):
+    if components.get("flows") and not flow_complete:
         errors.append("Flows in plan but forge-flow has not produced a build guide")
-    if components.get("power_pages") and not gate.get("power_pages_complete", False):
+    if components.get("power_pages") and not pages_complete:
         errors.append("Power Pages in plan but forge-pages has not completed")
+    if forge_owned_components and not forge_complete:
+        errors.append("Forge-owned artifacts are in plan but forge has not completed")
     if gate["components_blocked"]:
         errors.append(f"Components blocked: {gate['components_blocked']}")
 
@@ -305,11 +340,28 @@ def check_phase5(pi):
 
     # Check canvas_app_bootstrapped if canvas app in plan
     if components.get("canvas_apps"):
+        canvas_files = _find_files("src/canvas-apps", "*.pa.yaml")
+        if not canvas_files:
+            errors.append("Canvas App in plan but no .pa.yaml found in src/canvas-apps/ — forge-canvas must save source artifacts before Phase 5 passes")
         state_path = ".relay/state.json"
         if os.path.exists(state_path):
             state = load_json_file(state_path, "state.json")
             if not state.get("canvas_app_bootstrapped"):
                 errors.append("Canvas App in plan but state.json.canvas_app_bootstrapped is not true")
+        else:
+            errors.append("Canvas App in plan but .relay/state.json does not exist")
+
+    if components.get("model_driven_apps"):
+        mda_files = _find_files("src/mda", "*.xml")
+        if not mda_files:
+            errors.append("Model-Driven App in plan but no XML artifacts found in src/mda/ — forge-mda must save source artifacts before Phase 5 passes")
+        if not os.path.exists("scripts/apply-mda-sitemap.ps1"):
+            errors.append("Model-Driven App in plan but scripts/apply-mda-sitemap.ps1 is missing")
+
+    if components.get("power_pages"):
+        page_artifacts = [path for path in _find_files("src/pages", "*") if os.path.isfile(path)]
+        if not page_artifacts:
+            errors.append("Power Pages in plan but no source artifacts found in src/pages/ — forge-pages must save portal output before Phase 5 passes")
 
     return errors
 

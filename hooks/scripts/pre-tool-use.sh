@@ -210,11 +210,13 @@ WIREFRAMES_PATH=$(canonicalize_path "docs/wireframes.html" "$WORKSPACE_ROOT")
 EXISTING_SOLUTION_PATH=$(canonicalize_path "docs/existing-solution.md" "$WORKSPACE_ROOT")
 CANVAS_APP_INSTRUCTIONS_PATH=$(canonicalize_path "docs/canvas-app-instructions.md" "$WORKSPACE_ROOT")
 FLOW_BUILD_GUIDE_PATH=$(canonicalize_path "docs/flow-build-guide.md" "$WORKSPACE_ROOT")
+PLAN_SCORES_PATH=$(canonicalize_path "docs/plan-scores.md" "$WORKSPACE_ROOT")
 PLAN_INDEX_PATH=$(canonicalize_path ".relay/plan-index.json" "$WORKSPACE_ROOT")
 EXECUTION_LOG_PATH=$(canonicalize_path ".relay/execution-log.jsonl" "$WORKSPACE_ROOT")
 CANVAS_APP_DIR=$(canonicalize_path "src/canvas-apps" "$WORKSPACE_ROOT")
 MDA_DIR=$(canonicalize_path "src/mda" "$WORKSPACE_ROOT")
 PAGES_DIR=$(canonicalize_path "src/pages" "$WORKSPACE_ROOT")
+DATAVERSE_DIR=$(canonicalize_path "src/dataverse" "$WORKSPACE_ROOT")
 APPLY_MDA_SITEMAP_PATH=$(canonicalize_path "scripts/apply-mda-sitemap.ps1" "$WORKSPACE_ROOT")
 
 # --- Check 1: Plan Lock ---
@@ -261,9 +263,9 @@ case "$AGENT" in
     ;;
 
   critic)
-    # Critic can only write to critic-report.md
-    if ! path_is "$CANONICAL_PATH" "$CRITIC_REPORT_PATH"; then
-      echo "BLOCKED: Critic can only write to docs/critic-report.md. Found: $CANONICAL_PATH" >&2
+    # Critic can write its report and adversarial approval state
+    if ! path_is "$CANONICAL_PATH" "$CRITIC_REPORT_PATH" && ! path_is "$CANONICAL_PATH" "$PLAN_INDEX_PATH"; then
+      echo "BLOCKED: Critic can only write to docs/critic-report.md or .relay/plan-index.json. Found: $CANONICAL_PATH" >&2
       exit 2
     fi
     ;;
@@ -285,17 +287,22 @@ case "$AGENT" in
     ;;
 
   scout)
-    # Scout can only write to requirements.md
-    if ! path_is "$CANONICAL_PATH" "$REQUIREMENTS_PATH"; then
-      echo "BLOCKED: Scout can only write to docs/requirements.md. Found: $CANONICAL_PATH" >&2
+    # Scout can write discovery artifacts and coordination state
+    if ! path_is "$CANONICAL_PATH" "$REQUIREMENTS_PATH" \
+      && ! path_is "$CANONICAL_PATH" "$STATE_FILE" \
+      && ! path_is "$CANONICAL_PATH" "$PLAN_INDEX_PATH"; then
+      echo "BLOCKED: Scout can only write to docs/requirements.md, .relay/state.json, or .relay/plan-index.json. Found: $CANONICAL_PATH" >&2
       exit 2
     fi
     ;;
 
   drafter)
-    # Drafter can only write to plan.md and security-design.md (initial draft)
-    if ! path_is "$CANONICAL_PATH" "$PLAN_PATH" && ! path_is "$CANONICAL_PATH" "$SECURITY_DESIGN_PATH"; then
-      echo "BLOCKED: Drafter can only write to docs/plan.md or docs/security-design.md. Found: $CANONICAL_PATH" >&2
+    # Drafter can write planning artifacts and manifest state
+    if ! path_is "$CANONICAL_PATH" "$PLAN_PATH" \
+      && ! path_is "$CANONICAL_PATH" "$SECURITY_DESIGN_PATH" \
+      && ! path_is "$CANONICAL_PATH" "$PLAN_SCORES_PATH" \
+      && ! path_is "$CANONICAL_PATH" "$PLAN_INDEX_PATH"; then
+      echo "BLOCKED: Drafter can only write to docs/plan.md, docs/security-design.md, docs/plan-scores.md, or .relay/plan-index.json. Found: $CANONICAL_PATH" >&2
       exit 2
     fi
     ;;
@@ -375,9 +382,14 @@ case "$AGENT" in
     ;;
 
   vault)
-    # Vault can only write PowerShell scripts and src/solution/
-    if ! path_under "$CANONICAL_PATH" "$SRC_SOLUTION_DIR" && ! path_is_ps1_in_dir "$CANONICAL_PATH" "$SCRIPTS_DIR"; then
-      echo "BLOCKED: Vault can only write scripts/*.ps1 or files under src/solution/. Found: $CANONICAL_PATH" >&2
+    # Vault can write Dataverse build artifacts plus Relay build state
+    if ! path_under "$CANONICAL_PATH" "$SRC_SOLUTION_DIR" \
+      && ! path_under "$CANONICAL_PATH" "$DATAVERSE_DIR" \
+      && ! path_is_ps1_in_dir "$CANONICAL_PATH" "$SCRIPTS_DIR" \
+      && ! path_is "$CANONICAL_PATH" "$STATE_FILE" \
+      && ! path_is "$CANONICAL_PATH" "$PLAN_INDEX_PATH" \
+      && ! path_is "$CANONICAL_PATH" "$EXECUTION_LOG_PATH"; then
+      echo "BLOCKED: Vault can only write under src/solution/, src/dataverse/, scripts/*.ps1, or Relay state files. Found: $CANONICAL_PATH" >&2
       exit 2
     fi
     ;;

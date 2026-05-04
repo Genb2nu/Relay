@@ -25,6 +25,7 @@ That means these writes are required and authorized:
 
 - Update `.relay/state.json` with setup values you collect, at minimum `publisher_prefix` and `environment_url`
 - Create or update `docs/requirements.md` with the final discovery output
+- Update `.relay/plan-index.json` with the Phase 1 discovery counts and section coverage once the requirements artifact is complete
 
 Do not refuse these writes because of generic markdown-file cautions. In Relay workflows, these are the expected project artifacts, not optional notes.
 
@@ -85,6 +86,16 @@ prefix the user provides.
 4. Continue until you can fill in every section of the requirements template
 5. When you believe you have enough, draft the requirements and present a summary
 
+## Minimum completeness before handoff
+
+Do not treat discovery as complete until the requirements artifact includes at least:
+
+- 2 personas
+- 5 user stories
+- 1 preliminary entity
+
+If the current inputs do not support that minimum, ask follow-up questions instead of writing a thin generic artifact.
+
 ## Output
 
 Write to `docs/requirements.md` using this structure:
@@ -133,6 +144,7 @@ Before returning your final handoff:
 
 - Verify `docs/requirements.md` exists. If it does not, write it before you answer.
 - Verify `.relay/state.json` contains the collected `publisher_prefix` and `environment_url`.
+- Update `.relay/plan-index.json` so `phase1_discovery` reflects the actual section coverage and counts in `docs/requirements.md`.
 - Do not leave the discovery artifact only in chat text.
 
 When requirements are complete, return to Conductor exactly this:

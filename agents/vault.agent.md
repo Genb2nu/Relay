@@ -52,6 +52,8 @@ Never assume `cr_`. Never hardcode any prefix.
 - Follow the plan's schema specification exactly — table names, column names, data types, relationships, cascade behaviours.
 - Use Dataverse MCP tools when available. Fall back to PAC CLI if MCP is not connected.
 - Use the Microsoft power-platform-skills commands when they match what you need (e.g. `/setup-datamodel`).
+- Create or select the solution FIRST, then ensure every subsequent Dataverse metadata call adds components to that custom solution.
+- Generated build scripts should live under `src/dataverse/` unless the plan explicitly requires another path.
 
 ## Security Role Constraint
 
@@ -68,18 +70,29 @@ This means:
 Always follow this order:
 
 1. **Solution** — Create or select the solution with the correct publisher
-2. **Tables** — Create tables with correct ownership type (User vs Organisation)
-3. **Columns** — Add all columns with correct types, requirements, defaults
-4. **Option sets** — Create global and local option sets
-5. **Relationships** — Create 1:N, N:1, N:N relationships with correct cascade
-6. **Keys** — Create alternate keys if specified
-7. **Security roles** — Create roles with exact privileges from security-design.md
-   - **Idempotency:** Before creating, check existence by name AND root BU:
-     `$filter=name eq '<RoleName>' and _businessunitid_value eq <rootBuId>`
-   - Never filter by name alone — Dataverse allows duplicate role names at different BUs
-   - If role exists at root BU, skip creation and proceed to privilege assignment
-8. **Views** — Create system views as specified
-9. **Sample data** — Load seed/test data if the plan specifies it
+2. **Global choice sets** — Create global option sets first when the plan uses them
+3. **Tables** — Create all tables with ownership + PrimaryAttribute only
+4. **Propagation wait** — After each table creation, wait briefly before querying metadata
+5. **Columns** — Add non-lookup columns after all tables exist
+6. **Lookup columns + relationships** — Create lookups only after every referenced table exists
+7. **Keys** — Create alternate keys if specified
+8. **Security roles** — Create roles with exact privileges from security-design.md
+    - **Idempotency:** Before creating, check existence by name AND root BU:
+      `$filter=name eq '<RoleName>' and _businessunitid_value eq <rootBuId>`
+    - Never filter by name alone — Dataverse allows duplicate role names at different BUs
+    - If role exists at root BU, skip creation and proceed to privilege assignment
+9. **Views** — Create system views as specified
+10. **Sample data** — Load seed/test data if the plan specifies it
+
+## Solution Binding (MANDATORY)
+
+After you know `state.json.solution_name`, every Dataverse metadata request that creates a component must include:
+
+```powershell
+$headers["MSCRM.SolutionUniqueName"] = $solutionName
+```
+
+Without this header, the component lands outside the custom solution. Do not mark Vault complete until you verify the solution has linked components.
 
 ## Script Path Resolution
 
@@ -128,9 +141,7 @@ Include these values in your handoff so Conductor can write them to `.relay/plan
   "phase_gates": {
     "phase5_build": {
       "vault_complete": true,
-      "tables_created": 3,
-      "roles_created": 3,
-      "fls_profiles_created": 1,
+      "solution_component_count": 42,
       "validated_at": "<ISO 8601 timestamp>"
     }
   },
@@ -144,6 +155,7 @@ Include these values in your handoff so Conductor can write them to `.relay/plan
 ```
 
 - `vault_complete`: `true` only when ALL planned tables, roles, and FLS profiles exist
+- `solution_component_count`: count linked components in the custom solution after build; if it is `0`, Vault is not complete
 - `components`: GUIDs for every created component — Forge specialists read this to avoid duplicates
 
 ---
@@ -167,9 +179,17 @@ $ownership = (Invoke-RestMethod `
 
 Always check BEFORE building the privilege assignment request:
 ```powershell
-$depth = if ($ownership -eq "OrganizationOwned") { 8 } else { $plannedDepth }
-# 8 = Global, 4 = Local (BU), 1 = Basic (User)
+$depth = if ($ownership -eq "OrganizationOwned") { "Global" } else { $plannedDepth }
 ```
+
+## Dataverse metadata safety rules
+
+- Every table creation must include a valid primary name attribute / `PrimaryAttribute`.
+- Integer and Decimal Web API payloads must omit unsupported `DefaultValue`.
+- Decimal Web API payloads must omit unsupported `Scale`.
+- Use the bound role action route:
+  `POST /api/data/v9.2/roles(<roleId>)/Microsoft.Dynamics.CRM.AddPrivilegesRole`
+- Role depth values must be enum names such as `Basic`, `Local`, and `Global`, not raw integers.
 
 ---
 

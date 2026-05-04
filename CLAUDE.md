@@ -91,17 +91,32 @@ Phase 4 — ADVERSARIAL PASS (Critic)
 
 Phase 5 — BUILD (Vault + Stylist parallel, then Forge specialists)
   Invoke Vault → creates Dataverse schema, security roles, FLS profiles, seed data
-  Invoke Stylist → produces docs/design-system.md
-  Both write component GUIDs and status to plan-index.json
-  Then invoke Forge specialists:
-    Step 3a: forge-canvas → Canvas App screens (if plan includes Canvas App)
-    Step 3b: forge-mda    → Model-Driven App (if plan includes MDA)
-    Step 3c: forge-flow   → Flow build guides (if plan includes flows)
-    Step 3d: forge-pages  → Power Pages portal (if plan includes Power Pages)
-    Step 3e: forge        → Plugins, code apps, env vars (if any in plan)
+    - Create/select the solution FIRST
+    - Set MSCRM.SolutionUniqueName on all metadata API calls
+    - Generate and execute bootstrap-dirs.ps1 → create-schema.ps1 → create-roles.ps1 → create-bu.ps1
+    - Verify the custom solution has linked components before marking Vault complete
+  Invoke Stylist → produces docs/design-system.md and updates phase5_build.stylist_complete
+  Do NOT stop after Vault + Stylist
+  Then invoke every applicable Forge specialist from the locked plan:
+    Step 5c: forge-canvas → Canvas App screens (if plan includes Canvas App)
+      - Mandatory first step: print Checklist A and wait for the Canvas App URL
+      - Do not generate YAML until the user confirms blank app creation, coauthoring, and data source setup
+    Step 5d: forge-mda    → Model-Driven App (if plan includes MDA)
+    Step 5e: forge-flow   → Flow build guides (if plan includes flows)
+    Step 5f: forge-pages  → Power Pages portal (if plan includes Power Pages)
+    Step 5g: forge        → Plugins, code apps, env vars (if any in plan)
   In VS Code: run steps sequentially, skipping any not in the plan
-  In Copilot CLI with /fleet: run 3a+3b+3c+3d in parallel where independent
-  Forge specialists update plan-index.json phase5_build fields
+  In Copilot CLI with /fleet: run forge-canvas / forge-mda / forge-flow / forge-pages in parallel where independent
+  Forge specialists update plan-index.json phase5_build specialist flags
+  Before Phase 6, Conductor verifies:
+    - vault_complete = true
+    - stylist_complete = true
+    - solution_component_count > 0 when the plan includes solution-backed artifacts (tables, roles, FLS, env vars, plugins, canvas apps, MDAs, etc.)
+    - forge_canvas_complete = true (or N/A)
+    - forge_mda_complete = true (or N/A)
+    - forge_flow_complete = true (or N/A)
+    - forge_pages_complete = true (or N/A)
+    - forge_complete = true (or N/A)
   Run: python scripts/relay-gate-check.py --phase 5
 
 Phase 6 — VERIFICATION (Sentinel + Warden parallel)
