@@ -66,12 +66,16 @@ Conductor runs each agent's logic sequentially using that agent's persona
 and rules, producing the output itself. Output quality is identical.
 This is expected behaviour — not an error.
 
+The same fallback applies in Phase 5 when a specialist can describe the build
+artifacts but cannot execute them directly in the current interface: Conductor
+persists the returned artifacts and runs the generated commands/scripts.
+
 ## Phase Transition Rules
 
 ```
 Phase 0 — Scaffold     → always runs, no gate
 Phase 1 — Discovery    → gate: requirements.md exists and covers personas + workflow
-Phase 2 — Planning     → gate: plan.md + security-design.md exist
+Phase 2 — Planning     → gate: plan.md + security-design.md exist and the plan is build-ready for Vault
 Phase 3 — Review       → gate: Auditor AND Warden both approve (loop until both pass)
 Phase 4 — Adversarial  → gate: Critic 18/18 checklist pass
                          ↓ PLAN LOCKED (SHA256 checksums computed)
@@ -190,6 +194,7 @@ When `python scripts/relay-gate-check.py --phase N` exits 1:
 | "security tests failed" | Forge specialist/Vault fix → Warden re-test |
 | "drift detected" | Forge specialist (fix missing components) |
 | "inconsistent with docs" | Drafter (update plan or fix plan-index) |
+| "build-ready for Vault" | Drafter (fill missing build-contract details) |
 | "DECISION NEEDED" | Ask user |
 | "Required script missing" | Forge (generate the script) |
 | "no .dll found" | Forge (compile plugin) |
@@ -217,6 +222,7 @@ agent continues running (or remains stuck).
    - Vault: "Write tables 1-8 to create-schema-part1.ps1" → then "Write tables 9-16"
    - Forge specialists: Split by component type — one specialist per app/flow/script
 4. **Log the timeout** in execution-log.jsonl as `event: "agent_timeout"`
+5. **If a Phase 5 specialist returned exact scripts/artifacts but could not persist or execute them, Conductor should persist and run them before declaring the phase blocked**
 
 **Root cause:** Large file output + high token-density code = context window exhaustion.
 The agent reaches its output limit before the `create` tool call completes. The 400-line

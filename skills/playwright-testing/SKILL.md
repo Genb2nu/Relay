@@ -62,9 +62,44 @@ ACTION REQUIRED — Playwright Auth (~3 min, one-time)
 
 1. Terminal: npm run auth:headful
    Sign in with test user when browser opens
-2. For MDA tests: npm run auth:mda:headful
-3. Reply "Auth complete"
+2. Verify the active account separately in each maker surface you will use (Power Apps, Power Pages, Power Automate)
+3. Dismiss startup blockers such as coachmarks, onboarding panes, flyouts, account menus, stale side panels, and modal overlays
+4. For MDA tests: npm run auth:mda:headful
+5. Reply "Auth complete"
 ```
+
+## Maker surface preflight (before browser-driven verification)
+
+For Power Pages or cloud-flow-dependent scenarios, verify these before deeper automation:
+
+1. Power Pages maker `/portals` loads for the intended owner/admin account
+2. Power Automate trigger search exposes the documented Power Pages trigger when the scenario depends on it
+3. The active account is correct in each relevant surface independently
+
+If any of those fail, stop as `environment-blocked` instead of repeatedly retrying browser interactions.
+
+## clearTransientBlockers helper pattern
+
+Use a reusable helper before interacting with maker controls:
+
+```typescript
+async function clearTransientBlockers(page: Page): Promise<void> {
+  const dismissTargets = [
+    page.getByRole('button', { name: /got it|close|dismiss|skip/i }),
+    page.getByRole('button', { name: /not now|maybe later/i }),
+    page.getByLabel(/close/i),
+  ];
+
+  for (const target of dismissTargets) {
+    const count = await target.count().catch(() => 0);
+    if (count > 0) {
+      await target.first().click().catch(() => {});
+    }
+  }
+}
+```
+
+Call this after sign-in, after navigation to a maker surface, and again before concluding that a control is missing.
 
 ## .env Template (generated from state.json)
 

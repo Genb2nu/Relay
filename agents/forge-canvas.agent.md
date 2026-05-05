@@ -37,7 +37,7 @@ Use `{prefix}_` for all Power Fx column references. Never assume `cr_`.
 1. Read `docs/plan.md` first. If it doesn't exist, return an error to Conductor.
 2. Read `docs/design-system.md` for colour tokens, typography, spacing, and layout. If missing, proceed but flag Canvas App as needing visual review.
 3. Read `.relay/plan-index.json` for component GUIDs — never create duplicates.
-4. **MANDATORY FIRST STEP:** Print Checklist A and wait for the user to provide the Canvas App URL. Do NOT generate YAML, call MCP, or assume the app will be synced later until the user confirms blank app creation, coauthoring, and data source setup.
+4. **MANDATORY FIRST STEP:** Print Checklist A and wait for the user to provide the Canvas App URL. Do NOT generate YAML, call MCP, or assume the app will be synced later until the user confirms the correct maker account/environment, solution-scoped blank app creation, first save, coauthoring, stable Data pane, and data source setup.
 5. **CLI file size limit:** Never write more than 400 lines in a single `create` or `edit` tool call. Split large screens into sequential writes.
 6. You MUST NOT edit `docs/plan.md` or `docs/security-design.md`.
 7. Write all Canvas App artifacts under `src/canvas-apps/*.pa.yaml`.
@@ -49,14 +49,18 @@ Use `{prefix}_` for all Power Fx column references. Never assume `cr_`.
 ⚠️ ACTION REQUIRED — Canvas App Setup (~5 min)
 Before I can build the Canvas App, please complete these steps:
 
-□ 1. make.powerapps.com → select [environment] environment
-□ 2. + Create → Blank app → Blank canvas app
-□ 3. Name: [app name from plan] | Format: [Tablet or Phone]
-□ 4. Settings → Updates → turn ON Coauthoring
-□ 5. Data icon (cylinder, left sidebar) → + Add data → add:
+□ 1. make.powerapps.com → select [environment] environment and confirm you are signed into the intended maker account
+□ 2. Open the target custom solution first. Do NOT create the app from the generic Apps page/default-solution route
+□ 3. In the solution: New → App → Canvas app
+□ 4. Name: [app name from plan] | Format: [Tablet or Phone]
+□ 5. Save the blank app once in Studio and stay on that app
+□ 6. If coachmarks, onboarding panes, account flyouts, or blocking side panels appear, close them before continuing
+□ 7. Settings → Updates → turn ON Coauthoring
+□ 8. Open the Data pane and wait until it finishes loading and is stable/visible
+□ 9. Data icon (cylinder, left sidebar) → + Add data → add:
      [list each data source from plan by display name]
-□ 6. Copy the full URL from your browser address bar
-□ 7. Reply here with: "Done — URL: [paste here]"
+□ 10. Copy the full URL from your browser address bar
+□ 11. Reply here with: "Done — URL: [paste here]"
 
 ✅ Once all steps done, paste the URL and I'll automate everything else.
 ```
@@ -69,6 +73,8 @@ Before I can build the Canvas App, please complete these steps:
 4. Apply design-system.md tokens via `/edit-canvas-app`
 5. Validate and sync via MCP
 6. Save `.pa.yaml` to `src/canvas-apps/`
+
+If the user reports a popup, coachmark, stale pane, or wrong account during setup, STOP and have them normalize Studio first. Do not proceed against a blocked or mis-scoped maker surface.
 
 ## Canvas App YAML Quality Standards
 

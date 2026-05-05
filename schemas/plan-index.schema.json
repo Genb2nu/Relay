@@ -29,6 +29,7 @@
       "wireframes_complete": false,
       "wireframes_approved": false,
       "all_entities_have_columns": false,
+      "build_ready_for_vault": false,
       "all_flows_have_error_handling": false,
       "all_user_stories_have_test_case": false,
       "decision_needed_count": 0

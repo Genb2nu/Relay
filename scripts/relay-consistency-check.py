@@ -50,6 +50,10 @@ def read_text(path):
         return ""
 
 
+def contains_any(text, patterns):
+    return any(pattern in text for pattern in patterns)
+
+
 def load_plan_index():
     try:
         with open(PLAN_INDEX_PATH, encoding="utf-8") as handle:
@@ -107,6 +111,51 @@ def check_consistency(pi):
                                 "check": "plan.md",
                                 "finding": f"Column table not found for {table_name} in plan.md"
                             })
+
+    # --- Check 2b: build_ready_for_vault ---
+    if phase2.get("build_ready_for_vault") is True:
+        planned_tables = components.get("tables", [])
+        planned_flows = components.get("flows", [])
+
+        if not contains_any(plan, ["build order", "deployment sequence", "deployment and operations runbook", "runbook"]):
+            issues.append({
+                "claim": "build_ready_for_vault: true",
+                "check": "plan.md",
+                "finding": "No build-order or deployment/runbook section found in plan.md"
+            })
+
+        if planned_tables:
+            if not contains_any(plan, ["ownership:", "ownership type", "ownership: user", "ownership: organisation", "ownership: organization"]):
+                issues.append({
+                    "claim": "build_ready_for_vault: true",
+                    "check": "plan.md",
+                    "finding": "No ownership markers found in plan.md for planned tables"
+                })
+            if not contains_any(plan, ["primary name", "primary attribute"]):
+                issues.append({
+                    "claim": "build_ready_for_vault: true",
+                    "check": "plan.md",
+                    "finding": "No primary name / primary attribute markers found in plan.md"
+                })
+            if "autonumber" in plan and not contains_any(plan, ["autonumber format", "auto-number format", "format:"]):
+                issues.append({
+                    "claim": "build_ready_for_vault: true",
+                    "check": "plan.md",
+                    "finding": "Autonumber columns appear in plan.md but no autonumber format is documented"
+                })
+            if "choice" in plan and not contains_any(plan, ["global choice", "local choice", "option set", "options |", "options:"]):
+                issues.append({
+                    "claim": "build_ready_for_vault: true",
+                    "check": "plan.md",
+                    "finding": "Choice columns appear in plan.md but no local/global choice strategy or option values are documented"
+                })
+
+        if planned_flows and not contains_any(plan, ["concurrency", "degree=1", "degree 1", "singleton", "idempotency"]):
+            issues.append({
+                "claim": "build_ready_for_vault: true",
+                "check": "plan.md",
+                "finding": "Flows are planned but no concurrency/idempotency markers were found in plan.md"
+            })
 
     # --- Check 3: security_design_md_exists claim vs actual content ---
     if phase2.get("security_design_md_exists") is True:

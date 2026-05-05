@@ -32,16 +32,16 @@ Run this against `docs/plan.md` cross-referenced with `docs/requirements.md`:
 ### Schema Completeness (5 items)
 | # | Check | PASS criteria |
 |---|---|---|
-| 6 | Every entity has full column list | Data type, max length, required/optional, default value |
+| 6 | Every entity has full column list | Data type, max length, required/optional, default value, primary name attribute, autonumber format when used |
 | 7 | All relationships defined with cascade | 1:N, N:1, N:N with cascade behaviour specified |
-| 8 | Option set values are explicit | Integer values + display labels for every choice column |
-| 9 | Table ownership type declared | User-owned or Org-owned per table with justification |
+| 8 | Option set values are explicit | Integer values + display labels for every choice column, plus local/global choice strategy |
+| 9 | Table ownership type declared | User-owned or Org-owned per table with justification; standard-table extensions name their update boundary |
 | 10 | Naming conventions consistent | All tables/columns use {prefix}_{name} pattern |
 
 ### Flow & Logic Completeness (5 items)
 | # | Check | PASS criteria |
 |---|---|---|
-| 11 | Every flow has trigger + steps + error handling | No "TBD" in flow definitions |
+| 11 | Every flow has trigger + steps + error handling | No "TBD" in flow definitions; concurrency/idempotency defined when data is written |
 | 12 | Flow triggers are specific | Not "when something happens" but exact trigger type + filter |
 | 13 | Plugins have pre/post image requirements | Which fields, which stage, sync vs async |
 | 14 | Business rules listed (or marked as N/A) | Even "no business rules needed" is acceptable |
@@ -57,7 +57,7 @@ Run this against `docs/plan.md` cross-referenced with `docs/requirements.md`:
 ### Deployment & Testing (2 items)
 | # | Check | PASS criteria |
 |---|---|---|
-| 19 | Solution strategy defined | Solution name, publisher, managed vs unmanaged |
+| 19 | Solution strategy defined | Solution name, publisher, managed vs unmanaged, and a build runbook explicit enough for Vault |
 | 20 | Test approach defined | How to verify each component works |
 
 ---

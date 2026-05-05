@@ -54,6 +54,8 @@ Never assume `cr_`. Never hardcode any prefix.
 - Use the Microsoft power-platform-skills commands when they match what you need (e.g. `/setup-datamodel`).
 - Create or select the solution FIRST, then ensure every subsequent Dataverse metadata call adds components to that custom solution.
 - Generated build scripts should live under `src/dataverse/` unless the plan explicitly requires another path.
+- If direct Dataverse execution is unavailable in the current interface, you MUST still generate the canonical Vault script set under `src/dataverse/` and return exact run instructions to Conductor. Do not stop with only a list of suggested filenames.
+- If the current interface blocks file writes, return the full script bodies in your handoff section-by-section so Conductor can persist them exactly.
 
 ## Security Role Constraint
 
@@ -71,7 +73,7 @@ Always follow this order:
 
 1. **Solution** — Create or select the solution with the correct publisher
 2. **Global choice sets** — Create global option sets first when the plan uses them
-3. **Tables** — Create all tables with ownership + PrimaryAttribute only
+3. **Tables** — Create all tables with ownership + `PrimaryNameAttribute`, and define the primary string column inside `Attributes`
 4. **Propagation wait** — After each table creation, wait briefly before querying metadata
 5. **Columns** — Add non-lookup columns after all tables exist
 6. **Lookup columns + relationships** — Create lookups only after every referenced table exists
@@ -94,12 +96,32 @@ $headers["MSCRM.SolutionUniqueName"] = $solutionName
 
 Without this header, the component lands outside the custom solution. Do not mark Vault complete until you verify the solution has linked components.
 
+**Post-build verification (MANDATORY):**
+```powershell
+$solution = (Invoke-RestMethod `
+    -Uri "$orgUrl/api/data/v9.2/solutions?`$select=solutionid,uniquename&`$filter=uniquename eq '$solutionName'" `
+    -Headers $headers).value | Select-Object -First 1
+
+if ($null -eq $solution) {
+    throw "Solution $solutionName not found after build."
+}
+
+$componentCheck = Invoke-RestMethod `
+    -Uri "$orgUrl/api/data/v9.2/solutioncomponents?`$select=solutioncomponentid&`$filter=_solutionid_value eq $($solution.solutionid)&`$count=true&`$top=1" `
+    -Headers $headers
+
+$solutionComponentCount = [int]$componentCheck.'@odata.count'
+if ($solutionComponentCount -le 0) {
+    throw "Components not linked to solution — check MSCRM.SolutionUniqueName header"
+}
+```
+
 ## Script Path Resolution
 
 All generated PowerShell scripts MUST resolve `.relay/state.json` and other project
-files relative to `$PSScriptRoot`, not the current working directory:
+files relative to the workspace root, not the current working directory:
 ```powershell
-$projectRoot = Split-Path $PSScriptRoot -Parent
+$projectRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 $stateFile = Join-Path $projectRoot ".relay\state.json"
 $state = Get-Content $stateFile -Raw | ConvertFrom-Json
 $orgUrl = $state.environment
@@ -113,11 +135,20 @@ If you hit an ambiguity not covered by the plan:
 
 - **Schema ambiguity** (e.g. "should this be Single Line or Multi Line?") — Make the conservative choice and note it in your handoff.
 - **Security ambiguity** (e.g. "should this reference table be org-owned or user-owned?") — STOP. Return the question to Conductor. Warden answers security questions.
+- **Build-readiness contract violation** (e.g. missing primary name attribute, autonumber format, choice-set strategy, or authoritative writer for a calculated field in a plan that claims it is build-ready) — STOP and return the missing item to Conductor as a planning defect. Do not invent locked-plan details.
 - **Technical limitation** (e.g. "can't create N:N with this column type") — Return the limitation to Conductor with the specific error.
 
 ## Output
 
 Write Dataverse schema artifacts to the source tree as appropriate (solution XML, metadata files, etc.).
+
+Minimum script set when the plan includes Dataverse build work:
+- `src/dataverse/bootstrap-dirs.ps1`
+- `src/dataverse/create-schema.ps1`
+- `src/dataverse/create-roles.ps1`
+- `src/dataverse/create-bu.ps1`
+
+If you can execute directly, still leave these scripts behind unless the plan explicitly requires a different artifact path.
 
 ## Handoff
 
@@ -146,17 +177,26 @@ Include these values in your handoff so Conductor can write them to `.relay/plan
     }
   },
   "components": {
-    "tables": { "<prefix>_<table1>": "<entityid>", "<prefix>_<table2>": "<entityid>" },
-    "security_roles": { "<RoleName>": "<roleid>" },
-    "fls_profiles": { "<ProfileName>": "<profileid>" },
-    "environment_variables": { "<VarName>": "<definitionid>" }
+    "tables": [
+      { "logical_name": "<prefix>_<table1>", "display_name": "<Table1>", "columns": 12, "id": "<entityid>" }
+    ],
+    "security_roles": [
+      { "name": "<RoleName>", "id": "<roleid>" }
+    ],
+    "fls_profiles": [
+      { "name": "<ProfileName>", "id": "<profileid>" }
+    ],
+    "environment_variables": [
+      { "name": "<VarName>", "id": "<definitionid>" }
+    ]
   }
 }
 ```
 
 - `vault_complete`: `true` only when ALL planned tables, roles, and FLS profiles exist
 - `solution_component_count`: count linked components in the custom solution after build; if it is `0`, Vault is not complete
-- `components`: GUIDs for every created component — Forge specialists read this to avoid duplicates
+- `components`: preserve the plan inventory and enrich items with IDs when known
+- `state.json.components`: authoritative GUID maps for Forge specialist coordination and duplicate prevention
 
 ---
 
@@ -179,14 +219,21 @@ $ownership = (Invoke-RestMethod `
 
 Always check BEFORE building the privilege assignment request:
 ```powershell
-$depth = if ($ownership -eq "OrganizationOwned") { "Global" } else { $plannedDepth }
+if ($ownership -eq "OrganizationOwned") {
+    $depth = "Global"
+} else {
+    $depth = $plannedDepth
+}
 ```
 
 ## Dataverse metadata safety rules
 
-- Every table creation must include a valid primary name attribute / `PrimaryAttribute`.
-- Integer and Decimal Web API payloads must omit unsupported `DefaultValue`.
+- Every `EntityDefinitions` create payload must use `PrimaryNameAttribute` plus an `Attributes` array that contains the primary string column. Do not send a nested `PrimaryAttribute` object in Web API payloads.
+- Custom `SchemaName` values must preserve the publisher separator (for example `a2a_Request`, not `a2aRequest`), otherwise Dataverse rejects the component as missing a valid customization prefix.
+- Global option sets must set `IsGlobal = $true`. Only local per-column option sets should use `IsGlobal = $false`.
+- Integer Web API payloads must omit unsupported `DefaultValue`; use `AttributeType`, `AttributeTypeName`, `Format`, and bounds instead.
 - Decimal Web API payloads must omit unsupported `Scale`.
+- A child table can have only one parental relationship. If a child table already has a parental/cascade parent, any additional optional lookups must use non-parental cascade settings (`NoCascade` / `Restrict` / `RemoveLink` as specified by the locked plan).
 - Use the bound role action route:
   `POST /api/data/v9.2/roles(<roleId>)/Microsoft.Dynamics.CRM.AddPrivilegesRole`
 - Role depth values must be enum names such as `Basic`, `Local`, and `Global`, not raw integers.
@@ -304,7 +351,11 @@ $ownership = (Invoke-RestMethod -Uri "$orgUrl/api/data/v9.2/EntityDefinitions(Lo
 # 4. Build privilege array with correct depths
 $privArray = @()
 foreach ($p in $privs) {
-    $depth = if ($ownership -eq "OrganizationOwned") { "Global" } else { "<depth-from-security-design>" }
+    if ($ownership -eq "OrganizationOwned") {
+        $depth = "Global"
+    } else {
+        $depth = "<depth-from-security-design>"
+    }
     $privArray += @{ PrivilegeId = $p.privilegeid; Depth = $depth }
 }
 
@@ -312,7 +363,7 @@ foreach ($p in $privs) {
 #    (AddPrivilegesRole does NOT downgrade existing higher depths)
 foreach ($p in $privArray) {
     try {
-        Invoke-RestMethod -Method POST -Uri "$orgUrl/api/data/v9.2/RemovePrivilegeRole" `
+        Invoke-RestMethod -Method POST -Uri "$orgUrl/api/data/v9.2/roles($roleId)/Microsoft.Dynamics.CRM.RemovePrivilegeRole" `
             -Headers $headers -Body (@{ RoleId = $roleId; PrivilegeId = $p.PrivilegeId } | ConvertTo-Json) `
             -ContentType "application/json" -ErrorAction SilentlyContinue
     } catch { }  # OK if not present
@@ -323,24 +374,25 @@ $addBody = @{
     RoleId = $roleId
     Privileges = $privArray
 } | ConvertTo-Json -Depth 5
-Invoke-RestMethod -Method POST -Uri "$orgUrl/api/data/v9.2/AddPrivilegesRole" `
+Invoke-RestMethod -Method POST -Uri "$orgUrl/api/data/v9.2/roles($roleId)/Microsoft.Dynamics.CRM.AddPrivilegesRole" `
     -Headers $headers -Body $addBody -ContentType "application/json"
 ```
 
 **Depth values for AddPrivilegesRole:**
-| Depth | Meaning | Integer |
-|---|---|---|
-| Basic | User-owned records only | 1 |
-| Local | Business Unit records | 2 |
-| Deep | BU + child BU records | 3 |
-| Global | All records (org-wide) | 4 |
+| Depth | Meaning |
+|---|---|
+| Basic | User-owned records only |
+| Local | Business Unit records |
+| Deep | Business Unit + child Business Units |
+| Global | All records (org-wide) |
 
 **Rules:**
 - Read privilege requirements from `docs/security-design.md` — Warden specifies exact depths
 - Always check table ownership type BEFORE setting depth (org-owned = Global only)
+- Do not write numeric depth values into the script. Use enum names such as `Basic`, `Local`, `Deep`, and `Global`.
 - If downgrading a role that may already exist: RemovePrivilegeRole → then AddPrivilegesRole
 - Log each role + privilege assignment to execution-log.jsonl
-- Write role GUIDs to plan-index.json components.security_roles
+- Write role GUIDs to state.json components.security_roles and, when available, add `id` fields to the corresponding plan-index.json component items
 
 ---
 

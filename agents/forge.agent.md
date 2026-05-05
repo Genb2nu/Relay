@@ -155,12 +155,17 @@ For solution connection references (flows) — deployment settings pattern:
 - ❌ CANNOT: Create brand new OAuth connections (browser login required — one-time per connector type)
 
 ### Other Components
-- ✅ CAN: Plugins — register assembly + step via PAC CLI (PROVEN)
+- ✅ CAN: Plugins — compile signed DLLs and register assembly/type/steps/pre-images via the Dataverse plugin deployment cycle (PROVEN)
 - ✅ CAN: Environment variables — create + set via PAC CLI (PROVEN)
 - ✅ CAN: Publisher + solution creation (PROVEN)
 - ✅ CAN: Power Pages — full site via /create-site (requires power-pages@power-platform-skills)
 - ✅ CAN: Seed/test data via Dataverse API or PAC CLI
 - ❌ CANNOT: Business Rules (use plugin or flow instead where possible)
+
+**Plugin pattern:** generate a strong-name key when needed, set `<SignAssembly>true</SignAssembly>` and
+`<AssemblyOriginatorKeyFile>...</AssemblyOriginatorKeyFile>` in the `.csproj`, then use the full
+Dataverse plugin deployment cycle. Treat bare `pac plugin push` as an update-only shortcut for
+existing assemblies with a known `--pluginId`, not as the first-time registration path.
 
 ---
 
@@ -291,9 +296,16 @@ No [connector name] connection exists in this environment yet.
 ⚠️ ACTION REQUIRED — Plugin Deployment (~3 min)
 
 □ 1. Open terminal in: src/plugins/[PluginName]/
-□ 2. dotnet build --configuration Release
-□ 3. pac plugin push --plugin-file bin/Release/[PluginName].dll
-□ 4. Verify: Solutions → [solution] → Plug-in assemblies
+□ 2. Ensure the plugin project is strong-name signed before build:
+     - .csproj contains <SignAssembly>true</SignAssembly>
+     - .csproj contains <AssemblyOriginatorKeyFile>[PluginName].snk</AssemblyOriginatorKeyFile>
+     - if the .snk file is missing, generate one before building
+□ 3. dotnet build --configuration Release
+□ 4. Register using the full Dataverse plugin deployment cycle:
+     upload assembly → register plugin type → register steps → register pre-images → cache flush
+□ 5. Do NOT rely on bare `pac plugin push` for first-time registration:
+     current PAC builds require an existing --pluginId and unsigned DLLs fail with 0x8004416c
+□ 6. Verify: Solutions → [solution] → Plug-in assemblies and Plug-in steps
 
 ✅ Reply "Plugin deployed" when registered.
 ```

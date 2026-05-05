@@ -198,6 +198,8 @@ def check_phase2(pi):
         errors.append("Wireframes are not approved — Conductor must set phase2_planning.wireframes_approved = true after user confirmation")
     if not gate["all_entities_have_columns"]:
         errors.append("Not all entities have column definitions")
+    if not gate.get("build_ready_for_vault", False):
+        errors.append("Plan is not build-ready for Vault — phase2_planning.build_ready_for_vault must be true before review")
     if not gate["all_flows_have_error_handling"]:
         errors.append("Not all flows have error handling specified")
     if gate["decision_needed_count"] > 0:

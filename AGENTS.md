@@ -93,6 +93,20 @@ tools:
 
 ---
 
+## Blocked handoff rule
+
+When an agent cannot complete because of an environment, platform, or access blocker, the handoff must preserve the exact recovery sequence already attempted.
+
+At minimum, include:
+- the blocker state that remains true
+- the concrete steps already tried, in order
+- what changed vs what did not change after each step
+- the next recommended action and whether it is inside or outside Relay's repo scope
+
+Do not return a generic "blocked" summary that loses prior recovery evidence. The next agent should be able to continue from the preserved attempt history without re-running the same blind retries.
+
+---
+
 ## Skill conventions (SKILL.md)
 
 Every skill folder contains a `SKILL.md` file:

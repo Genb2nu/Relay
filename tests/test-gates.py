@@ -105,6 +105,93 @@ def test_phase1_requires_requirements_artifact() -> None:
         shutil.rmtree(workspace, ignore_errors=True)
 
 
+def test_phase2_requires_build_ready_contract() -> None:
+    workspace = make_workspace()
+    try:
+        plan_index = load_plan_index()
+        phase2 = plan_index["phase_gates"]["phase2_planning"]
+        phase2["plan_md_exists"] = True
+        phase2["security_design_md_exists"] = True
+        phase2["wireframes_complete"] = True
+        phase2["wireframes_approved"] = True
+        phase2["all_entities_have_columns"] = True
+        phase2["all_flows_have_error_handling"] = True
+        phase2["build_ready_for_vault"] = False
+        plan_index["components"]["tables"] = [{"logical_name": "ecms_request", "display_name": "Request", "columns": 4}]
+        plan_index["components"]["flows"] = [{"name": "Notify Request Owner", "trigger": "row_added_or_modified", "has_error_handling": True}]
+        write_json(workspace / ".relay" / "plan-index.json", plan_index)
+
+        plan_path = workspace / "docs" / "plan.md"
+        plan_path.parent.mkdir(parents=True, exist_ok=True)
+        plan_path.write_text(
+            """# Implementation Plan — Shadow Test
+
+## 3. Dataverse Schema
+### ecms_request — Request
+Ownership: User-owned.
+Primary name: ecms_requestnumber.
+
+| Logical Name | Display Name | Type | Required | Default | Description |
+|---|---|---|---|---|---|
+| ecms_requestnumber | Request Number | Autonumber | Required | Auto-generated | Primary name |
+| ecms_status | Status | Choice | Required | Draft | Request status |
+
+Autonumber format: REQ-{SEQNUM:6}
+Status uses a global choice with options: Draft=100000000, Submitted=100000001
+
+## 9. Power Automate Flows
+Flow concurrency: sequential, degree=1.
+Scope plus Configure run after handles failures.
+
+## 12. Deployment and Operations Runbook
+Build order:
+1. Create solution
+2. Create schema
+3. Create roles
+""",
+            encoding="utf-8",
+        )
+
+        security_path = workspace / "docs" / "security-design.md"
+        security_path.write_text(
+            """# Security Design — Shadow Test
+
+## 1. Threat Model
+- Protect request data.
+
+## 2. Authentication & Authorisation
+- Internal users authenticate with Entra ID.
+
+## 3. Security Role Matrix
+- Request table uses least privilege.
+
+## 4. Field-Level Security
+- None for this shadow test.
+
+## 5. Connection Reference Identity
+- Use a shared service identity.
+""",
+            encoding="utf-8",
+        )
+
+        wireframes_path = workspace / "docs" / "wireframes.html"
+        wireframes_path.write_text("<html><body>Wireframes</body></html>\n", encoding="utf-8")
+
+        blocked_result = run_gate(workspace, 2)
+        if blocked_result.returncode != 1:
+            raise AssertionError(f"Phase 2 should fail when build_ready_for_vault is false:\n{blocked_result.stdout}\n{blocked_result.stderr}")
+        assert_contains(blocked_result.stdout, "Plan is not build-ready for Vault")
+
+        plan_index["phase_gates"]["phase2_planning"]["build_ready_for_vault"] = True
+        write_json(workspace / ".relay" / "plan-index.json", plan_index)
+
+        pass_result = run_gate(workspace, 2)
+        if pass_result.returncode != 0:
+            raise AssertionError(f"Phase 2 should pass when build_ready_for_vault is true and the plan contains build markers:\n{pass_result.stdout}\n{pass_result.stderr}")
+    finally:
+        shutil.rmtree(workspace, ignore_errors=True)
+
+
 def test_phase5_requires_canvas_and_mda_artifacts() -> None:
     workspace = make_workspace()
     try:
@@ -262,6 +349,7 @@ def test_phase5_requires_power_pages_artifacts() -> None:
 def main() -> None:
     tests = [
         ("Phase 1 requires requirements artifact", test_phase1_requires_requirements_artifact),
+        ("Phase 2 requires build-ready contract", test_phase2_requires_build_ready_contract),
         ("Phase 5 requires Canvas and MDA artifacts", test_phase5_requires_canvas_and_mda_artifacts),
         ("Phase 5 requires Forge for environment variables", test_phase5_requires_forge_for_environment_variables),
         ("Phase 5 allows flow-only manual builds", test_phase5_allows_flow_only_manual_builds_without_solution_components),

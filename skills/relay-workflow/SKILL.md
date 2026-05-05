@@ -36,7 +36,7 @@ collaborate through a structured workflow with quality gates at every handoff.
 - **Agent**: Drafter
 - **Input**: Approved `docs/requirements.md`
 - **Output**: `docs/plan.md`, `docs/security-design.md`
-- **Gate**: User acknowledges plan is ready for review
+- **Gate**: The plan is explicit enough for Vault to build without inventing missing schema details
 
 ### Phase 3 — Plan Review
 - **Agents**: Auditor + Warden (can run in sequence)
@@ -64,6 +64,7 @@ collaborate through a structured workflow with quality gates at every handoff.
 - **Input**: Locked `docs/plan.md`, `docs/security-design.md`
 - **Output**: Dataverse schema, apps, flows, code in `src/`
 - **Warden on-call**: Available for security questions during build
+- **Fallback**: If a build specialist cannot execute directly but returns exact scripts/artifacts, Conductor persists and runs them instead of treating the phase as failed immediately
 
 ### Phase 6 — Verification
 - **Agents**: Sentinel (functional) + Warden (security)

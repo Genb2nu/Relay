@@ -59,6 +59,7 @@ Phase 1 — DISCOVERY
 Phase 2 — PLANNING
   Invoke Drafter → produces docs/plan.md + docs/security-design.md
   Drafter updates plan-index.json phase2_planning + components fields
+    - phase2_planning.build_ready_for_vault = true only when the locked plan is explicit enough for Vault to build without inventing schema details
   Phase 2 Planning Substep — Wireframes
     1. Invoke Stylist Mode C → writes docs/wireframes.html and sets phase2_planning.wireframes_complete = true
     2. Tell user: "Wireframes ready. Open docs/wireframes.html in a browser."
@@ -100,7 +101,7 @@ Phase 5 — BUILD (Vault + Stylist parallel, then Forge specialists)
   Then invoke every applicable Forge specialist from the locked plan:
     Step 5c: forge-canvas → Canvas App screens (if plan includes Canvas App)
       - Mandatory first step: print Checklist A and wait for the Canvas App URL
-      - Do not generate YAML until the user confirms blank app creation, coauthoring, and data source setup
+      - Do not generate YAML until the user confirms solution-scoped blank app creation, first save, coauthoring, stable Data pane, and data source setup
     Step 5d: forge-mda    → Model-Driven App (if plan includes MDA)
     Step 5e: forge-flow   → Flow build guides (if plan includes flows)
     Step 5f: forge-pages  → Power Pages portal (if plan includes Power Pages)
@@ -240,6 +241,8 @@ without attempting automation, Conductor must:
 
 When running in GitHub Copilot VS Code, subagents cannot write files directly. Conductor runs each agent's logic sequentially using that agent's persona, rules, and output format. Output quality is identical — only the isolation model differs. This is expected behaviour, not an error.
 
+If a build-phase specialist cannot execute directly in the current interface, that is also a Conductor fallback case — not automatic product failure. Persist the exact artifacts the specialist returned, then run the generated scripts or commands yourself before declaring the phase blocked.
+
 ---
 
 ## Context Folder (pre-session documents)
@@ -262,7 +265,7 @@ Every project maintains `.relay/plan-index.json` alongside the markdown docs. Th
 | Auditor | phase3_review: auditor_approved, issues_found/resolved |
 | Warden | phase3_review: warden_approved, issues_found/resolved; phase6_verify: security_tests |
 | Critic | phase4_adversarial: critic_approved, checklist counts, plan_locked, checksums |
-| Vault | components: GUIDs for tables, roles, FLS profiles, env vars |
+| Vault | phase5_build status, optional IDs on plan-index component items, and authoritative GUID maps in state.json |
 | Stylist | phase2_planning: wireframes_complete; phase5_build: stylist_complete |
 | Forge / Forge specialists | phase5_build: components_built/partial/blocked |
 | Sentinel | phase6_verify: sentinel_approved, drift_detected, drift_items |
@@ -298,19 +301,27 @@ During Phase 6, Sentinel runs `python scripts/relay-drift-check.py --env <org-ur
 
 ## Component ID Coordination (prevents duplicates)
 
-Vault writes all created component GUIDs to `.relay/plan-index.json` under `"components"`:
+Vault writes authoritative component GUID maps to `.relay/state.json` under `"components"` and may enrich `.relay/plan-index.json` component items with optional `id` fields:
 
 ```json
 {
-  "components": {
-    "app_modules": { "<n>": "<guid>" },
-    "security_roles": { "<n>": "<guid>" },
-    "fls_profiles": { "<n>": "<guid>" }
+  "state.json": {
+    "components": {
+      "app_modules": { "<n>": "<guid>" },
+      "security_roles": { "<n>": "<guid>" },
+      "fls_profiles": { "<n>": "<guid>" }
+    }
+  },
+  "plan-index.json": {
+    "components": {
+      "tables": [{ "logical_name": "<prefix>_<table>", "id": "<guid>" }],
+      "security_roles": [{ "name": "<role>", "id": "<guid>" }]
+    }
   }
 }
 ```
 
-Forge specialists read this before creating ANY component. If a GUID exists → modify the existing one. Never create a duplicate.
+Forge specialists read `state.json.components` before creating ANY shared component. If a GUID exists → modify the existing one. Never create a duplicate.
 
 ---
 
@@ -376,7 +387,7 @@ Step 4: Phase 5 COMPLETE — all inline verifications passed
 
 ```
 Phase 5 — BUILD
-  Invoke Vault   → Dataverse schema, security roles, FLS, env vars (writes GUIDs to plan-index)
+  Invoke Vault   → Dataverse schema, security roles, FLS, env vars (writes GUID maps to state.json and may add ids to plan-index items)
   Invoke Stylist → docs/design-system.md  (parallel with Vault, no dependency)
   Then invoke Forge specialists:
     forge-canvas → Canvas App screens (reads design-system.md)
@@ -387,6 +398,12 @@ Phase 5 — BUILD
 ```
 
 Stylist runs parallel with Vault. forge-canvas MUST read `docs/design-system.md` before calling `/generate-canvas-app`. If `design-system.md` is missing, forge-canvas proceeds but flags Canvas App as needing visual review.
+
+If Vault cannot execute Dataverse work directly, Vault must still generate the canonical script set under `src/dataverse/` and Conductor must persist and run:
+1. `src/dataverse/bootstrap-dirs.ps1`
+2. `src/dataverse/create-schema.ps1`
+3. `src/dataverse/create-roles.ps1`
+4. `src/dataverse/create-bu.ps1`
 
 ---
 
@@ -484,9 +501,10 @@ pointing agents at the files they need.
 ### Phase 5b /fleet prompt
 ```
 /fleet
-@forge.agent Read docs/plan.md, docs/design-system.md, .relay/state.json. Build Canvas App via Canvas Authoring MCP. Read skills/canvas-app-enterprise-layout/SKILL.md. Output: src/canvas-apps/*.pa.yaml
-@forge.agent Read docs/plan.md, .relay/state.json. Build MDA sitemap XML via Dataverse API. Read skills/power-platform-alm/SKILL.md. Do NOT use /genpage. Output: scripts/build-mda.ps1
-@forge.agent Read docs/plan.md, .relay/state.json. Generate flow JSON definitions + import via pac solution import + activate via clientdata PATCH. Read skills/power-platform-alm/SKILL.md. Output: src/flows/*.json + scripts/activate-flows.ps1
+@forge-canvas.agent Read docs/plan.md, docs/design-system.md, .relay/state.json, and src/canvas-apps/. Print Checklist A first, wait for the Canvas App URL, then build Canvas App YAML via Canvas Authoring MCP. Output: src/canvas-apps/*.pa.yaml
+@forge-mda.agent Read docs/plan.md and .relay/state.json. Build and deploy the Model-Driven App sitemap/forms via Dataverse API. Do not leave MDA output as files only.
+@forge-flow.agent Read docs/plan.md and .relay/state.json. Build the flow implementation guidance for each planned flow, including trigger, actions, connection references, and activation notes.
+@forge-pages.agent Read docs/plan.md and .relay/state.json. Build Power Pages output only when the locked plan includes a portal and the required site setup has been completed.
 ```
 
 ### Phase 5b inline verification /fleet prompt

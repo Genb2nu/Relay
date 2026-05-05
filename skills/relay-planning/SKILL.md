@@ -73,9 +73,13 @@ For every entity:
 
 Include:
 - All columns with logical names, data types, required flags
+- Ownership type for every custom table
+- Primary name attribute for every custom table
 - Relationships (1:N, N:N)
-- Global choices / option sets with values
+- Local vs global choices / option sets with explicit values
 - Auto-number formats
+- Standard-table extensions (for example Contact) with who may update the extension fields
+- Authoritative writer for system-calculated fields (due dates, counters, operational state, etc.)
 
 ### 3. Security Design (reference security-design.md)
 
@@ -103,6 +107,7 @@ For Model-Driven App:
 For each flow — full specification:
 - Trigger: table, message, filter columns
 - Concurrency: sequential (degree=1) or parallel
+- Idempotency / duplicate-submit handling when the flow writes data or sends notifications
 - Step-by-step logic: all conditions, branches, and actions
 - Error handling: Scope + Configure run after (failed, timed out)
 - Connection references used
@@ -130,6 +135,12 @@ Explicit dependency-ordered list:
 8. App module + sitemap
 9. Canvas App
 10. Seed data
+
+If the solution uses Vault-generated scripts, state the canonical artifact set explicitly:
+- `src/dataverse/bootstrap-dirs.ps1`
+- `src/dataverse/create-schema.ps1`
+- `src/dataverse/create-roles.ps1`
+- `src/dataverse/create-bu.ps1`
 
 ### 8. DECISION NEEDED Items
 

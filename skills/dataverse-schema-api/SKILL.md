@@ -101,6 +101,9 @@ $tableBody = @{
 
 Invoke-RestMethod -Method POST -Uri "$orgUrl/api/data/v9.2/EntityDefinitions" `
     -Headers $headers -Body $tableBody -ContentType "application/json"
+
+# Wait for metadata propagation before querying or adding dependent metadata
+Start-Sleep -Seconds 3
 ```
 
 ---
@@ -179,6 +182,32 @@ $body = @{
     }
     DisplayName   = @{ "@odata.type" = "Microsoft.Dynamics.CRM.Label"; LocalizedLabels = @(@{ "@odata.type" = "Microsoft.Dynamics.CRM.LocalizedLabel"; Label = "<Display>"; LanguageCode = 1033 }) }
 }
+```
+
+### Global Choice Set
+```powershell
+$globalChoiceBody = @{
+    "@odata.type" = "Microsoft.Dynamics.CRM.OptionSetMetadata"
+    Name          = "<Prefix>_<ChoiceName>"
+    DisplayName   = @{
+        "@odata.type"  = "Microsoft.Dynamics.CRM.Label"
+        LocalizedLabels = @(@{
+            "@odata.type" = "Microsoft.Dynamics.CRM.LocalizedLabel"
+            Label         = "<Display>"
+            LanguageCode  = 1033
+        })
+    }
+    IsGlobal      = $true
+    OptionSetType = "Picklist"
+    Options       = @(
+        @{ Value = 100000000; Label = @{ "@odata.type" = "Microsoft.Dynamics.CRM.Label"; LocalizedLabels = @(@{ "@odata.type" = "Microsoft.Dynamics.CRM.LocalizedLabel"; Label = "Pending"; LanguageCode = 1033 }) } }
+        @{ Value = 100000001; Label = @{ "@odata.type" = "Microsoft.Dynamics.CRM.Label"; LocalizedLabels = @(@{ "@odata.type" = "Microsoft.Dynamics.CRM.LocalizedLabel"; Label = "Approved"; LanguageCode = 1033 }) } }
+    )
+} | ConvertTo-Json -Depth 10
+
+Invoke-RestMethod -Method POST `
+    -Uri "$orgUrl/api/data/v9.2/GlobalOptionSetDefinitions" `
+    -Headers $headers -Body $globalChoiceBody -ContentType "application/json"
 ```
 
 ### Lookup Column (via Relationship)
@@ -303,6 +332,7 @@ Invoke-RestMethod -Method POST `
 - Organization-owned tables can only receive `Global` privilege depth.
 - Integer / Decimal attribute payloads must omit unsupported `DefaultValue`.
 - Decimal attribute payloads must omit `Scale`.
+- Use enum depth names such as `Basic`, `Local`, `Deep`, and `Global` when assigning privileges. Do not send raw integers.
 
 ---
 

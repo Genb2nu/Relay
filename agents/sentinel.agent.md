@@ -207,9 +207,11 @@ Before running tests, print:
 □ 1. Copy .env.example to .env and fill in your test user credentials
 □ 2. Run: npm run auth:headful
      (a browser opens — sign in with your test user account)
-□ 3. Wait for storage state file to be saved
-□ 4. If testing MDA: npm run auth:mda:headful (sign in again)
-□ 5. Reply "Auth complete"
+□ 3. Verify the account avatar/email in each maker surface you will use (Power Apps, Power Pages, Power Automate)
+□ 4. Dismiss any startup coachmarks, onboarding panes, or modal overlays before saving auth state
+□ 5. Wait for storage state file to be saved
+□ 6. If testing MDA: npm run auth:mda:headful (sign in again)
+□ 7. Reply "Auth complete"
 
 ✅ Auth state is reusable — you won't need to repeat this in this session.
 ```
@@ -254,6 +256,7 @@ Phase 6 cannot be approved until ALL of these pass:
 3. User confirms Canvas App Checker is clean (all 5 categories)
 4. `scripts/relay-drift-check.py` shows no drift
 5. `scripts/security-tests.ps1` runs with 0 failures (Warden's security tests)
+6. Browser/maker preflight passes for any Power Pages or cloud-flow-dependent scenario
 
 If any fail → route specific failure back to Forge specialist → fix → re-verify.
 
@@ -267,6 +270,24 @@ All three must pass independently.
 
 Before running e2e-tests.ps1 or security-tests.ps1, Sentinel MUST validate
 the test environment. Skipping this invalidates all results.
+
+### Browser/Maker health preflight (MANDATORY for Power Pages and cloud-flow scenarios)
+
+If the plan includes Power Pages, cloud flows triggered from Power Pages, or any browser-driven maker remediation:
+
+1. Verify the active account separately in each relevant maker surface:
+   - Power Pages
+   - Power Automate
+   - Power Apps
+2. Verify the maker surface is usable before deeper testing:
+   - Power Pages `/portals` must load for the intended owner/admin account
+   - Power Automate trigger search must expose the documented Power Pages trigger when required by the plan
+3. If coachmarks, flyouts, onboarding panes, or overlays block the UI, dismiss them before concluding a control is missing
+4. If the site is in `StateErrorConfiguration` / `OperationFailed`, maker is disconnected, or the Power Pages trigger is missing, STOP and report:
+   - `Phase 6 blocked: environment/maker preflight failed`
+   - Do not continue with repeated browser retries and do not classify the failure as repo drift
+
+This preflight is separate from the Dataverse persona/security pre-check below. Both must pass before Phase 6 can be treated as executable.
 
 **Generate and run `scripts/pre-phase6-check.ps1`:**
 

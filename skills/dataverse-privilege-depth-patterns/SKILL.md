@@ -98,7 +98,7 @@ $body = @{
 } | ConvertTo-Json -Depth 5
 
 Invoke-RestMethod -Method POST `
-    -Uri "$orgUrl/api/data/v9.2/AddPrivilegesRole" `
+    -Uri "$orgUrl/api/data/v9.2/roles(<role-guid>)/Microsoft.Dynamics.CRM.AddPrivilegesRole" `
     -Headers $headers -Body $body -ContentType "application/json"
 ```
 
@@ -119,17 +119,19 @@ $body = @{
 } | ConvertTo-Json
 
 Invoke-RestMethod -Method POST `
-    -Uri "$orgUrl/api/data/v9.2/RemovePrivilegeRole" `
+    -Uri "$orgUrl/api/data/v9.2/roles(<role-guid>)/Microsoft.Dynamics.CRM.RemovePrivilegeRole" `
     -Headers $headers -Body $body -ContentType "application/json"
 ```
 
 **Pattern for downgrading privilege depth:**
 ```powershell
 # 1. Remove the existing privilege (any depth)
-RemovePrivilegeRole -RoleId $roleId -PrivilegeId $privId
+Invoke-RestMethod -Method POST -Uri "$orgUrl/api/data/v9.2/roles($roleId)/Microsoft.Dynamics.CRM.RemovePrivilegeRole" `
+  -Headers $headers -Body (@{ RoleId = $roleId; PrivilegeId = $privId } | ConvertTo-Json) -ContentType "application/json"
 
 # 2. Re-add at the desired lower depth
-AddPrivilegesRole -RoleId $roleId -Privileges @(@{ PrivilegeId = $privId; Depth = "Basic" })
+Invoke-RestMethod -Method POST -Uri "$orgUrl/api/data/v9.2/roles($roleId)/Microsoft.Dynamics.CRM.AddPrivilegesRole" `
+  -Headers $headers -Body (@{ RoleId = $roleId; Privileges = @(@{ PrivilegeId = $privId; Depth = "Basic" }) } | ConvertTo-Json -Depth 5) -ContentType "application/json"
 ```
 
 ---

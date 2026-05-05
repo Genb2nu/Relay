@@ -73,7 +73,9 @@ Do not refuse these writes because of generic markdown or HTML cautions. In Rela
 - Show navigation flow arrows between related screens so the user can review screen-to-screen flow
 - Add persona visibility annotations on each screen for actions, cards, and sensitive sections
 - Represent Model-Driven App areas as simplified wireframes: table view placeholder plus form field list
-- Keep the output intentionally low-fidelity. This is a planning preview, not a production UI build artifact
+- Keep the output as a planning preview, but make it presentation-friendly: it should look like a plausible app walkthrough in HTML, not a skeletal box diagram
+- Use realistic spacing, card sizes, nav widths, headings, and section labels so a client can understand how the intended app will feel at first glance
+- Avoid placeholder truncation in the preview itself. Primary labels and section titles should be fully readable in the wireframe HTML
 
 ### Required output structure
 `docs/wireframes.html` must include:
@@ -82,6 +84,7 @@ Do not refuse these writes because of generic markdown or HTML cautions. In Rela
 - One `<section>` per Canvas screen
 - A separate Model-Driven App section if `docs/plan.md` includes MDA components
 - Inline CSS only. No JavaScript frameworks, no external fonts, no CDN assets
+- App-like visual framing: realistic page chrome, cards, navigation treatments, and full-size labels suitable for stakeholder review
 
 ### Completion update
 After writing `docs/wireframes.html`, update `.relay/plan-index.json`:
@@ -429,11 +432,17 @@ For controls where X, Y, Width, Height are visible in YAML:
 - Check: `Y + Height > AppHeight` → CRITICAL (control extends below screen)
 - AppWidth and AppHeight from Section 2 of design-system.md
 
-**4. Severity classification:**
+**4. Text fit and consistency pass:**
+- Review left-nav and other repeated button groups for consistent Width, Height, PaddingTop, and spacing
+- Flag navigation or action labels that are likely to wrap because the container is too narrow or `Wrap` is left on without intent
+- Flag section headings or card titles that are likely to clip or truncate because the label width is too small
+- Flag `AutoHeight` usage on repeated nav controls when it creates uneven button stacks or inconsistent vertical rhythm
+
+**5. Severity classification:**
 | Severity | Definition | Action |
 |---|---|---|
 | CRITICAL | Control off-screen, classic control used, wrong data source | forge-canvas MUST fix |
-| MAJOR | Wrong colour on primary action button, missing status badge colours | forge-canvas MUST fix |
+| MAJOR | Wrong colour on primary action button, missing status badge colours, nav text wrapping, clipped section heading, inconsistent repeated button sizing | forge-canvas MUST fix |
 | MINOR | Caption slightly wrong size, spacing 1-2px off | Document only — user decides |
 
 ### Output — docs/design-review.md
@@ -455,6 +464,8 @@ For controls where X, Y, Width, Height are visible in YAML:
 |---|---|---|---|
 | 1 | CRITICAL | Gallery uses Classic.Gallery | Replace with Gallery (modern) |
 | 2 | MAJOR | Submit button Fill=RGBA(0,0,0,1) should be RGBA(37,99,235,1) | Set Fill property to ColorPrimary |
+| 3 | MAJOR | Left-nav labels wrap because button Width is too small / Wrap is enabled | Increase button Width and disable wrapping for single-line nav labels |
+| 4 | MAJOR | Section title clips to "Priority W..." | Increase label width or reduce title font size so the full heading is visible |
 
 ## Token Coverage
 | Token | Expected RGBA | Found in YAML | Count |
@@ -472,6 +483,8 @@ For controls where X, Y, Width, Height are visible in YAML:
 - **ONE review pass only.** No infinite loops. Write findings, hand off, done.
 - forge-canvas fixes CRITICAL + MAJOR only. MINOR items go to user for their judgment.
 - If sanity check fails (0 tokens found, 0 controls found) → note "YAML format may have changed — manual verification needed" but do NOT block.
+- Treat obvious text-wrap, truncation, and repeated-control sizing defects as real visual issues, not cosmetic noise.
+- Treat obvious text-wrap, truncation, and repeated-control sizing defects as real visual issues, not cosmetic noise.
 
 ---
 

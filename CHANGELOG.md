@@ -4,30 +4,52 @@ All notable changes to Relay are documented here.
 
 ---
 
-## [0.6.5] — 2026-05-XX
+## [0.7.0] — 2026-05-XX
 
 ### Workflow
 - Phase 2b wireframes are reinforced as a mandatory planning substep before Phase 3 review
+- Phase 2 now carries an explicit `build_ready_for_vault` contract so ambiguous schema plans are blocked before review/lock
 - Phase 5 workflow now explicitly continues from Vault + Stylist into all applicable Forge specialists
 - Phase 5 completion contract now tracks specialist completion flags and solution component linkage
 
 ### Build Reliability
 - Vault guidance now requires `MSCRM.SolutionUniqueName` on Dataverse metadata calls so created components are linked to the custom solution
+- Vault guidance now requires canonical `src/dataverse/` fallback scripts and Conductor persistence/run fallback when direct execution is unavailable
+- Vault script path resolution now correctly walks from `src/dataverse/` back to the workspace root before reading `.relay/state.json`
 - Dataverse schema guidance now documents the working Web API payload patterns surfaced by smoke testing
+- Vault guidance now requires Web API table creation to use `PrimaryNameAttribute` plus `Attributes[]` instead of the unsupported nested `PrimaryAttribute` payload
+- Vault guidance now preserves publisher-prefixed schema names (for example `a2a_Request`) instead of collapsing them into invalid `a2aRequest` forms
+- Vault guidance now omits unsupported `DefaultValue` from integer column creation payloads
+- Vault guidance now explicitly requires solution-component count verification and no longer leaves stale unbound AddPrivilegesRole / RemovePrivilegeRole route examples
+- Vault guidance now avoids generating a second parental relationship when optional session lookups coexist with an existing request parent
 - Vault hook permissions now allow `src/dataverse/` artifacts and Relay build state updates
+- Forge plugin handoff now requires strong-name signing and no longer recommends bare `pac plugin push` for first-time registration on PAC builds that require `--pluginId`
+- Forge-MDA now treats `scripts/apply-mda-sitemap.ps1` as a real deployer contract and no longer allows undeployable placeholder form DSL to count as completed MDA output
+- Forge-MDA now requires theme deployment/verification when `src/mda/theme.json` is emitted and records view-default fidelity as part of completed MDA output
 
 ### Agent Coordination
 - Scout, Drafter, Critic, and Stylist write permissions/state contracts were aligned with the artifacts they are required to produce
+- Blocked handoffs now explicitly preserve the recovery sequence, failed attempts, and exact next-step evidence instead of dropping context
 - Forge-Canvas now treats Checklist A and the coauthoring/app bootstrap prompt as a hard first step
 - Critic can update adversarial gate state in `.relay/plan-index.json`
+- Forge-Canvas checklist now requires solution-scoped app creation, first save, maker-account confirmation, popup dismissal, and stable Data pane setup before MCP attachment
+- Stylist wireframe guidance now asks for presentation-friendly HTML previews and review-mode explicitly treats label wrap/clipping/repeated control sizing as MAJOR findings
+- Sentinel Phase 6 guidance now requires per-surface maker login verification and Power Pages / Power Automate browser preflight before final verification proceeds
+- Copilot CLI `/fleet` prompts in CLAUDE.md now dispatch the specialist Forge agents instead of stale generic Forge prompts for Canvas, MDA, and flow work
+
+### Skills
+- Added `relay-recovery-playbook` with proven recovery sequences for Power Pages provisioning failures, missing Power Pages triggers, and MDA deployment reapply loops
+- `playwright-testing` now includes maker-surface preflight guidance and a reusable transient-blocker clearing pattern
 
 ### Validation
 - `tests/test-hooks.sh` now covers Scout state writes, Drafter plan-index writes, Critic plan-index writes, and Vault dataverse artifact writes
+- `tests/test-gates.py` now covers the Phase 2 build-readiness gate alongside the existing Phase 1/5 checks
 - Phase 1 gate now requires `docs/requirements.md`, not just discovery counts in `.relay/plan-index.json`
+- Phase 2 consistency validation now checks for Vault build-readiness markers such as ownership, primary name attributes, choice strategy, autonumber formats, runbook coverage, and flow concurrency
 - Phase 5 gate now requires actual Canvas App and Model-Driven App source artifacts before specialist completion flags can pass
 
 ### Release
-- Release metadata bumped to 0.6.5
+- Release metadata bumped to 0.7.0
 
 ---
 
