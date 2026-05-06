@@ -87,7 +87,7 @@ use these `ComponentType` integer values:
 | 70 | FieldSecurityProfile | |
 | 80 | AppModule | Model-driven apps |
 | 91 | PluginAssembly | |
-| 92 | ConnectionReference | |
+| 10159 | ConnectionReference | Verified live — NOT 92 (which maps to SdkMessageProcessingStep) |
 | 380 | CanvasApp | |
 
 Example:
@@ -243,38 +243,52 @@ Flows can be fully automated by generating JSON definitions and importing them v
 ### Flow JSON Structure (simplified)
 ```json
 {
-  "name": "<FlowName> - Notification",
+  "schemaVersion": "1.0.0.0",
   "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "<prefix>_shareddataverse"
+        },
+        "api": { "name": "shared_commondataserviceforapps" }
+      }
+    },
     "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections":    { "defaultValue": {}, "type": "Object" },
+        "$authentication": { "defaultValue": {}, "type": "SecureObject" }
+      },
       "triggers": {
         "When_a_row_is_added": {
           "type": "OpenApiConnectionWebhook",
           "inputs": {
-            "host": { "connectionName": "shared_commondataserviceforapps" },
+            "host": {
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "SubscribeWebhookTrigger",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+            },
             "parameters": {
-              "subscriptionRequest/message": 1,
-              "subscriptionRequest/entityname": "<table_logical_name>"
+              "subscriptionRequest/message":    1,
+              "subscriptionRequest/entityname": "<table_logical_name>",
+              "subscriptionRequest/scope":      4
             }
           }
         }
       },
-      "actions": {
-        "Get_Employee": { ... },
-        "Get_Manager": { ... },
-        "Send_email": { ... }
-      },
-      "contentVersion": "1.0.0.0",
-      "$schema": "..."
-    },
-    "connectionReferences": {
-      "shared_commondataserviceforapps": {
-        "connectionName": "<prefix>_DataverseConnection",
-        "id": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
-      }
+      "actions": {}
     }
   }
 }
 ```
+
+> **Required:** All Dataverse row triggers must include `"subscriptionRequest/scope": 4` (Organization scope).
+> Omitting it will cause flow activation to fail with a missing-field validation error.
+> 
+> **Required:** The `primaryentity` field on the Dataverse workflow record must be `"none"` for all
+> cloud flows (category=5). Omitting it causes HTTP 400 on workflow POST.
 
 ### Import Pattern
 ```powershell
@@ -333,6 +347,9 @@ Use the deployment settings file to auto-populate existing connection IDs:
 ```powershell
 # Step 1 — Generate settings file (has empty ConnectionId slots)
 pac solution create-settings --solution-zip ./<YourSolutionName>.zip --settings-file ./deploy-settings.json
+
+# NOTE: Do NOT query the `connections` entity — it has no `connectorid` column and
+# returns only connections owned by the calling user. Use `connectionreferences` instead.
 
 # Step 2 — Query existing connection references in the environment
 $orgUrl = "https://<your-org>.crm.dynamics.com"
@@ -400,11 +417,23 @@ PATCH clientdata structure (what XRM expects):
 - statecode=1, statuscode=2 = Active (running)
 
 ### Connection reuse pattern
-Before creating new connections, search existing ones:
+Before creating new CRs, check whether matching ones already exist (and whether they are linked).
+Query `connectionreferences` — NOT `connections` (the `connections` entity lacks `connectorid`
+and returns only the calling user's own connections):
+
 ```powershell
-$conns = Invoke-RestMethod -Uri "$orgUrl/api/data/v9.2/connections?`$select=name,connectionid,connectorid" -Headers $h
-$dvConn = $conns.value | Where-Object { $_.connectorid -like "*commondataservice*" } | Select-Object -First 1
-$olConn = $conns.value | Where-Object { $_.connectorid -like "*office365*" } | Select-Object -First 1
+# Query connection references — environment-scoped, includes connectorid and connectionid
+$refs = Invoke-RestMethod `
+  -Uri "$orgUrl/api/data/v9.2/connectionreferences?`$select=connectionreferencelogicalname,connectorid,connectionid" `
+  -Headers $h
+
+$dvCR = $refs.value | Where-Object { $_.connectorid -like "*commondataserviceforapps*" } | Select-Object -First 1
+$olCR = $refs.value | Where-Object { $_.connectorid -like "*office365*" }              | Select-Object -First 1
+$teamsCR = $refs.value | Where-Object { $_.connectorid -like "*teams*" }               | Select-Object -First 1
 ```
-If found → wire automatically into clientdata connection references.
-If not found → user creates once in Power Apps → Forge queries and wires on next run.
+
+- If CR found AND `connectionid` is set → already linked; no action needed. Flows will activate automatically.
+- If CR found but `connectionid` is empty → CR exists but not linked; user must link manually in Power Automate Studio.
+- If CR not found → create it (without `connectionid`); user links after deployment.
+
+If not found → user creates a connection once in Power Automate → links via Solutions → Connection References.

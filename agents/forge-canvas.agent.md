@@ -76,6 +76,80 @@ Before I can build the Canvas App, please complete these steps:
 
 If the user reports a popup, coachmark, stale pane, or wrong account during setup, STOP and have them normalize Studio first. Do not proceed against a blocked or mis-scoped maker surface.
 
+## Canvas App Formula Quality Rules
+
+These rules prevent the most common formula bugs found in MCP-generated Canvas Apps.
+Verify all generated formulas against these rules before calling compile_canvas.
+
+### G1 — Data Source Names: Always Use Display Names
+
+Canvas Apps require **display names** for data sources, not logical (schema) names.
+
+| ❌ Wrong (logical name) | ✅ Correct (display name) |
+|---|---|
+| `nba_trainingrequests` | `'Training Requests'` |
+| `nba_staffmembers` | `'Staff Members'` |
+| `cr_approvals` | `'Approvals'` |
+
+**How to find display names:**
+- In Power Apps Studio Data pane, the name shown IS the display name
+- In Dataverse: the table's `DisplayName` property (not `LogicalName`)
+- Display names with spaces must be wrapped in single quotes in Power Fx
+
+Always confirm the exact display name via `list_data_sources` MCP tool before generating any formula that references a table. If `list_data_sources` is unavailable, use the plan's table display names (not schema names).
+
+### G2 — OptionSet Values: Enum Notation, Not Numeric
+
+Never use raw integer values for OptionSet (Choice) columns in Power Fx formulas.
+
+| ❌ Wrong (numeric) | ✅ Correct (enum notation) |
+|---|---|
+| `Filter(Requests, nba_status = 100000001)` | `Filter(Requests, nba_status = 'Training Requests (Choices)'.Submitted)` |
+| `Patch(Requests, {nba_status: 100000002})` | `Patch(Requests, {nba_status: 'Training Requests (Choices)'.Approved})` |
+| `Switch(rec.nba_type, 100000000, ...)` | `Switch(rec.nba_type, 'Training Type (Choices)'.Online, ...)` |
+
+**Enum notation format:** `'<TableDisplayName> (Choices)'.<OptionLabel>`
+
+If the plan lists option set numeric values for reference, convert them to enum notation in all generated formulas. Do not pass raw integers to Patch, Filter, Switch, or If expressions involving choice columns.
+
+### G3 — Schema Verification Before Formula Generation
+
+Before generating any screen formulas that reference table columns, verify the schema:
+
+1. Call `get_data_source_schema` for each data source used on the screen
+2. Cross-check every column name in your formulas against the returned schema
+3. If a column is not in the schema → do NOT generate it; raise a question to Conductor
+
+Common hallucinated columns to watch for:
+- Generic names like `nba_provider`, `nba_category`, `nba_grade`, `nba_notes` on custom tables
+- Assume nothing — verify every column name before use
+
+If `get_data_source_schema` is unavailable, use only column names explicitly listed in `docs/plan.md` or `docs/design-system.md`. Never invent column names.
+
+### G4 — TextInput: Use .Value Not .Text
+
+For modern (Fluent V9) TextInput controls, the output property is `.Value`, not `.Text`.
+
+| ❌ Wrong | ✅ Correct |
+|---|---|
+| `txtTitle.Text` | `txtTitle.Value` |
+| `If(IsBlank(txtAmount.Text), ...)` | `If(IsBlank(txtAmount.Value), ...)` |
+| `Patch(Table, {col: txtName.Text})` | `Patch(Table, {col: txtName.Value})` |
+
+Classic TextInput uses `.Text` — but classic controls are **never** used in Relay Canvas Apps (modern controls are mandatory). Always use `.Value` for TextInput output references.
+
+### G6 — Canvas MCP Session Recovery
+
+If MCP tool calls return HTTP 401 Unauthorized or "session not found" errors after a CLI restart:
+
+1. The coauthoring session token is tied to the CLI process — restarting invalidates it
+2. Recovery steps:
+   - Ask the user to confirm their Canvas App Studio tab is still open (do NOT close it)
+   - Run `/configure-canvas-mcp` with the same Canvas App URL to re-establish the session
+   - If the Studio tab was closed, the user must re-open the app in Studio and re-provide the URL
+3. After re-establishing the session, call `sync_canvas` to get the current server state before making any edits
+4. Document any gap in the Handoff if re-sync overwrote local changes
+
 ## Canvas App YAML Quality Standards
 
 **AccessibleLabel on every control:**

@@ -52,6 +52,49 @@ Do not refuse these writes because of generic markdown or HTML cautions. In Rela
 
 ---
 
+## Timeout & Checkpoint Protection
+
+Design Mode can generate large documents (300–500 lines) that take 40–50 minutes for complex apps.
+To avoid losing all work on a timeout:
+
+**Write design-system.md in phases — do not attempt to write it all in one pass.**
+
+### Phase Writing Order
+
+1. **Phase 1 (Sections 1–6):** Write design direction, app config, colour palette, typography, spacing, and component patterns first. Save immediately.
+2. **Phase 2 (Section 7):** Write the screen inventory and layout zones. Save after every 3 screens.
+3. **Phase 3 (Section 8):** Write Canvas App MCP prompts. Save after every 3 screens.
+4. **Phase 4 (Section 9–10):** Write MDA specs and navigation pattern last.
+
+### Checkpoint Saves
+
+After completing each phase, append a checkpoint marker to `.relay/execution-log.jsonl`:
+
+```python
+import json, datetime
+entry = {
+  "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+  "agent": "stylist",
+  "event": "checkpoint",
+  "phase": "design-phase-1",  # update: design-phase-1, design-phase-2, design-phase-3, design-phase-4
+  "screens_completed": <N>
+}
+with open(".relay/execution-log.jsonl", "a") as f:
+  f.write(json.dumps(entry) + "\n")
+```
+
+If the agent is interrupted mid-run, Conductor can resume from the last checkpoint. The partial `docs/design-system.md` will contain sections already written; the next run should append the missing sections rather than starting from scratch.
+
+### Long-Run Warning
+
+If `docs/plan.md` contains more than 6 Canvas App screens, alert Conductor before starting:
+```
+⚠️ This design will be large (~N screens × ~30 lines/screen prompt = ~Nk tokens).
+   Writing in 4 phases with checkpoint saves. Starting Phase 1 now.
+```
+
+---
+
 ## MODE C: Wireframe Generation (during Phase 2 planning)
 
 **Trigger:** Conductor invokes Stylist AFTER Drafter writes `docs/plan.md` and BEFORE Phase 3 review starts.
