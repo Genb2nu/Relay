@@ -23,12 +23,14 @@
     "solution_name": { "type": "string" },
     "phase": {
       "type": "string",
-      "enum": ["discovery", "planning", "review", "adversarial", "build", "verify", "complete"]
+      "enum": ["discovery", "planning", "review", "adversarial", "build", "verify", "complete",
+               "intake", "analysis", "security", "probing", "report", "snapshot", "fixing", "verifying"]
     },
     "mode": {
       "type": "string",
-      "enum": ["greenfield", "change", "bugfix"]
+      "enum": ["greenfield", "change", "bugfix", "inspect", "audit"]
     },
+    "pac_auth_account": { "type": ["string", "null"] },
     "plan_checksum": { "type": ["string", "null"] },
     "security_design_checksum": { "type": ["string", "null"] },
     "context_loaded": { "type": "boolean" },

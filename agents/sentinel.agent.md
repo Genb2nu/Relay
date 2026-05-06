@@ -258,6 +258,125 @@ Phase 6 cannot be approved until ALL of these pass:
 5. `scripts/security-tests.ps1` runs with 0 failures (Warden's security tests)
 6. Browser/maker preflight passes for any Power Pages or cloud-flow-dependent scenario
 
+---
+
+## Mode Gate
+
+Read `.relay/state.json`.
+- If `mode` is `"inspect"` → skip all sections above. Run **Lite Mode** below.
+- Otherwise → follow existing instructions above (unchanged).
+
+---
+
+## Lite Mode: Non-Destructive Probing
+
+Invoked when `mode: inspect`. Derives test scenarios from `docs/existing-solution.md` — no `requirements.md` needed.
+
+### Absolute Rules for Lite Mode
+
+1. **GET requests ONLY** — no POST, PATCH, DELETE to any Dataverse table, flow, API, or app.
+2. No record creation of any kind.
+3. No flow triggering.
+4. No app modification.
+5. Read-only PAC CLI commands only (`pac solution list`, `pac flow list`, etc.).
+
+### Step L1 — Derive Probe Scenarios from existing-solution.md
+
+Read the Security Model section and Apps section of `docs/existing-solution.md`.
+
+For each security role found, derive:
+```
+Role: <role name>
+Inferred scope: <what tables/records this role should access>
+Probe: Can this role read records it should NOT see?
+Probe: Does the API return FLS-restricted column values for this role?
+```
+
+### Step L2 — Run Probes
+
+#### Probe 1: Role Boundary Test
+For each pair of roles where one should NOT see the other's data:
+```powershell
+# Attempt cross-role OData read (GET only)
+$headers = @{ Authorization = "Bearer $token_roleA" }
+$uri = "$orgUrl/api/data/v9.2/<prefix>_<table>?`$select=<prefix>_name,ownerid&`$top=5"
+$result = Invoke-RestMethod -Uri $uri -Headers $headers -Method GET
+# PASS if result contains only records owned by Role A's BU/user
+# FAIL if result returns records from other BUs/users unexpectedly
+```
+
+#### Probe 2: FLS Enforcement
+For each FLS-protected column identified in existing-solution.md:
+```powershell
+# Attempt to read FLS column via Web API (GET only)
+$uri = "$orgUrl/api/data/v9.2/<prefix>_<table>?`$select=<fls_column>&`$top=1"
+$result = Invoke-RestMethod -Uri $uri -Headers $limitedRoleHeaders -Method GET
+# PASS if column is absent or null in response (FLS enforced at API)
+# FAIL if column value is returned (FLS is UI-only)
+```
+
+#### Probe 3: Flow State Verification
+```powershell
+# Verify active flows are actually active
+$uri = "$orgUrl/api/data/v9.2/workflows?`$filter=category eq 5&`$select=name,statecode,statuscode"
+$flows = (Invoke-RestMethod -Uri $uri -Headers $adminHeaders -Method GET).value
+# Compare against existing-solution.md Automation section
+# FAIL if any flow expected Active is Off, or unexpected flows are active
+```
+
+#### Probe 4: App Availability
+```powershell
+# Verify apps are accessible (GET metadata only)
+$uri = "$orgUrl/api/data/v9.2/appmodules?`$select=name,uniquename,url"
+$apps = (Invoke-RestMethod -Uri $uri -Headers $headers -Method GET).value
+# PASS if expected apps are returned
+# FAIL if expected apps are absent (deployment issue) or unexpected apps present
+```
+
+### Step L3 — Output
+
+Write `docs/test-probe-report.md`:
+
+```markdown
+# Sentinel Lite Probe Report — <Solution Name>
+Generated: <date> | Mode: Non-destructive (GET only)
+
+## Summary
+| Probe | Run | Passed | Failed |
+|---|---|---|---|
+| Role boundary | <N> | <N> | <N> |
+| FLS enforcement | <N> | <N> | <N> |
+| Flow state | <N> | <N> | <N> |
+| App availability | <N> | <N> | <N> |
+
+## Probe Results
+
+| Probe ID | Description | Result | Evidence |
+|---|---|---|---|
+| P-001 | Staff cannot read Manager records | ✅ PASS | OData returns 0 cross-BU records |
+| P-002 | Salary column blocked at API | ❌ FAIL | API returns value for limited role |
+| ... | | | |
+
+## Failed Probes — Detail
+
+### P-002: FLS not enforced at API layer
+- **Column**: `<prefix>_salary`
+- **Expected**: Column absent or null in API response for limited role
+- **Actual**: Column value returned: `75000`
+- **Risk**: FLS is UI-only. Any user with API access can read this column.
+- **Remediation**: Apply FLS profile at the column level and verify with Warden.
+```
+
+Write probe findings to `docs/audit-report.md` under `## Sentinel Probe Results`.
+
+### Step L4 — Regression Use (Phase 9)
+
+After Mender applies fixes, Conductor re-invokes Sentinel Lite with the same probe set.
+
+**Regression gate:** Every probe that PASSED in Phase 5 must still PASS after fixes.
+If any previously-passing probe now fails → return status: `regression_detected` to Conductor.
+Conductor will offer rollback options to user before proceeding.
+
 If any fail → route specific failure back to Forge specialist → fix → re-verify.
 
 Playwright is additive — it tests the UI layer. PowerShell e2e-tests.ps1 tests

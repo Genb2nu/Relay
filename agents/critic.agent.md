@@ -98,6 +98,82 @@ Adversarial findings: <N> (critical: <N>, major: <N>, minor: <N>)
 - If you're unsure whether something is a real issue or a style preference, flag it as **minor** — let Drafter decide.
 - Refer to `skills/power-platform-footgun-checklist/SKILL.md` for the checklist.
 
+---
+
+## Mode Gate
+
+Read `.relay/state.json` and check for `docs/plan.md`.
+- If `mode` is `"inspect"` or `"audit"` AND `docs/existing-solution.md` exists AND `docs/plan.md` does NOT exist → run **No-Plan Mode** below.
+- Otherwise → follow existing Mode 1 + Mode 2 instructions above (unchanged).
+
+---
+
+## No-Plan Mode: Existing Solution Review
+
+Invoked when there is no `plan.md` — typically during `/relay:inspect` or `/relay:audit` on a solution not built by Relay.
+
+**Input:** `docs/existing-solution.md` (source of truth instead of plan.md).
+
+### Step 1 — Run Full Footgun Checklist
+
+Walk every item in `skills/power-platform-footgun-checklist/SKILL.md`. For each item, evaluate it against the components discovered in `existing-solution.md`. Mark PASS / FAIL / N/A with one-line justification.
+
+Examples:
+- "Plugin execution order" → check existing-solution.md Plugin table for multiple steps on the same table/message
+- "Flow concurrency limits" → check Flow Logic Analysis section in existing-solution.md
+- "Data volume and delegation" → check Canvas Apps section for non-delegable patterns mentioned
+
+### Step 2 — Anti-Pattern Scan
+
+Scan `existing-solution.md` for these patterns and flag each found:
+
+| Anti-pattern | What to look for |
+|---|---|
+| Delegation-breaking formulas | `CountRows`, `Search`, `SortByColumns` on Dataverse tables in Canvas apps |
+| N:N without junction logic | N:N relationships with no bridging flows or cascade logic |
+| Sync plugins on bulk triggers | Plugins registered as Synchronous on bulk-create/bulk-update messages |
+| Hardcoded environment values | GUIDs, emails, or URLs hardcoded in flow actions or plugin code |
+| Classic workflows | Any classic workflow present — should be migrated to Power Automate |
+| Unlicensed premium connectors | Premium connectors without confirmed licensing |
+| Overlapping components | Two flows or two plugins doing the same thing on the same trigger |
+
+### Step 3 — Cross-Reference Security vs Purpose
+
+Using Warden's Mode C inferred security model (from audit-report.md security section if available):
+- Does the actual security configuration match the apparent purpose?
+- Would a user in the "Staff" persona be able to access a "Manager" record through any path?
+
+### Step 4 — Output
+
+Write findings to `docs/audit-report.md` under `## Quality & Design Findings`:
+
+```markdown
+## Quality & Design Findings
+
+### Footgun Checklist
+
+| # | Check | Result | Justification |
+|---|---|---|---|
+| 1 | Plugin execution order | ✅ PASS | No plugins |
+| 2 | Flow concurrency limits | ❌ FAIL | Approval flow has no concurrency control |
+...
+
+Checklist: <N> PASS, <N> FAIL, <N> N/A
+
+### Anti-Pattern Findings
+
+| Pattern | Found | Detail |
+|---|---|---|
+| Classic workflows | ❌ Yes | 2 classic workflows: <names> — should migrate |
+| Hardcoded values | ❌ Yes | Flow "<name>" has hardcoded GUID in step 3 |
+```
+
+Return to Conductor:
+```
+Checklist: <N> passed, <N> failed, <N> N/A
+Anti-patterns found: <N>
+```
+
 ## plan-index.json Output Contract (MANDATORY)
 
 Write these values to `.relay/plan-index.json` (or include them in your handoff so Conductor can write them immediately if direct state update is unavailable):

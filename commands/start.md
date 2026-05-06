@@ -47,7 +47,57 @@ python (Join-Path $relayRoot "scripts\relay-prerequisite-check.py")
 
 **If the gate returns exit code 0 (all critical checks pass):**
 - Show the summary to the user (especially any non-critical warnings)
-- Proceed to Step 0b
+- Proceed to Step 0c
+
+## Step 0c — Auth Selection
+
+Before scaffolding any files, confirm the correct PAC CLI account and environment.
+
+```powershell
+pac auth list
+pac org who
+```
+
+Present all authenticated profiles clearly:
+
+```
+Authenticated profiles:
+[1] * john@contoso.com    → Contoso Dev    https://contoso-dev.crm.dynamics.com
+[2]   test@contoso.com    → Contoso Dev    (test account — may lack admin roles)
+[3]   john@fabrikam.com   → Fabrikam Prod  https://fabrikam.crm.dynamics.com
+
+Currently active: [1] john@contoso.com → Contoso Dev
+```
+
+**If ONE profile:**
+Ask: "You are authenticated as `<account>` → `<env name>`. Is this the correct environment for this project? [Yes / No]"
+- If **No**: "Please run `pac auth select --index <n>` to switch, then re-run `/relay:start`." Stop here.
+- If **Yes**: proceed.
+
+**If MULTIPLE profiles:**
+Ask: "Multiple accounts are authenticated. Which one should Relay use for this project? Enter the index number.
+Note: the account needs **System Administrator** or **System Customizer** role — test-only accounts will fail during schema deployment."
+- Run: `pac auth select --index <n>`
+- Confirm: run `pac org who` again and display the new active profile
+
+After confirmation, store the confirmed values — they will be written to `state.json` in Step 0b:
+- `environment_url` → the confirmed org URL
+- `pac_auth_account` → the confirmed account email
+
+Log to `.relay/execution-log.jsonl` (create the file if needed):
+```python
+import json, datetime
+entry = {
+    "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+    "agent": "conductor",
+    "event": "auth_confirmed",
+    "account": "<confirmed_account>",
+    "org_url": "<confirmed_org_url>"
+}
+# append to .relay/execution-log.jsonl (create .relay/ dir first if needed)
+```
+
+Then proceed to Step 0b.
 
 ## Step 0b — Initialise project files
 
@@ -111,6 +161,12 @@ function New-RelayStateValue {
 $state = New-RelayStateValue -Schema $stateSchema | ConvertTo-Json -Depth 10
 Set-Content -Path ".relay/state.json" -Value $state
 
+# Immediately write the confirmed auth values from Step 0c
+$stateObj = Get-Content ".relay/state.json" | ConvertFrom-Json
+$stateObj.environment_url = "<org_url confirmed in Step 0c>"
+$stateObj.pac_auth_account = "<account confirmed in Step 0c>"
+$stateObj | ConvertTo-Json -Depth 10 | Set-Content ".relay/state.json"
+
 # Copy the canonical plan-index scaffold from the Relay plugin root
 $planIndexSource = Join-Path $relayRoot "schemas\plan-index.schema.json"
 if (-not (Test-Path $planIndexSource)) {
@@ -147,7 +203,7 @@ Only AFTER files are created — invoke Scout for discovery.
 When the user invokes this command:
 
 1. Check if `.relay/state.json` already exists in the current directory.
-  - If no: run Step 0b once, then continue.
+  - If no: run Step 0c, then Step 0b once, then continue.
   - If yes: read `.relay/state.json` and show the user the current `project_name`, `solution_name`, `phase`, and `context_loaded` state.
   - Offer exactly three choices before making any changes:
     - `Resume`: keep the existing `.relay/` files and do NOT run Step 0b again.

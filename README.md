@@ -4,7 +4,7 @@ A plugin-native SDLC orchestration system for Microsoft Power Platform. Ten spec
 
 Works on **Claude Code**, **GitHub Copilot CLI**, and **Copilot in VS Code**.
 
-> **v0.7.0** — enforced planning/build artifacts · specialist Forge continuation + solution-linked builds · presentation-ready wireframes · maker-surface recovery/playwright guardrails · safer Vault metadata and privilege guidance
+> **v0.8.0** — `/relay:inspect` for read-only solution analysis · **Mender** fix coordinator with snapshot/rollback · PAC auth account selection in `/relay:start` and `/relay:inspect` · Analyst + Warden + Critic + Sentinel extended for existing-solution mode
 
 ---
 
@@ -20,14 +20,15 @@ You describe what you want to build. Relay runs a squad of specialists through a
 | Security Architect | **Warden** | Security review + runtime API security tests post-build |
 | Adversarial Reviewer | **Critic** | 23-item footgun checklist + red-team pass before lock |
 | UI Designer | **Stylist** | Wireframes + Canvas App design system — RGBA tokens, typography, spacing |
-| Solution Mapper | **Analyst** | Maps existing solutions before change requests or audits |
+| Solution Mapper | **Analyst** | Maps existing solutions before change requests or audits; flow logic analysis + Solution Checker |
 | Dataverse Engineer | **Vault** | Tables, columns, security roles, FLS profiles, plugins |
 | Canvas App Developer | **Forge-Canvas** | Canvas App screens via Canvas Authoring MCP |
 | MDA Developer | **Forge-MDA** | Model-Driven App sitemap, forms, views |
-| Flow Developer | **Forge-Flow** | Power Automate flow build guides |
+| Flow Developer | **Forge-Flow** | Power Automate flows — Dataverse-shaped JSON, pac solution import, clientData PATCH activation |
 | Power Pages Developer | **Forge-Pages** | Power Pages portals via /create-site |
 | Developer | **Forge** | Plugins, code apps, web resources, env vars |
-| Tester | **Sentinel** | Functional verification + drift detection (plan vs actual build) |
+| Tester | **Sentinel** | Functional verification + drift detection (plan vs actual build); GET-only probing for inspect |
+| Fix Coordinator | **Mender** | Snapshot → fix → verify lifecycle for `/relay:inspect`; routes findings to Forge specialists; surgical + nuclear rollback |
 
 **Workflow:** discovery → planning (plan + wireframes) → review → adversarial → build → verify → complete
 
@@ -160,8 +161,9 @@ Watch the squad work.
 | Command | Description |
 |---|---|
 | `/relay:doctor` | Pre-flight check — validates tools, plugins, MCP, auth profiles |
-| `/relay:start` | Scaffold a new project and begin discovery |
+| `/relay:start` | Scaffold a new project and begin discovery (with PAC auth account selection) |
 | `/relay:load` | Load project documents before discovery |
+| `/relay:inspect` | Read-only audit of an existing solution — health score, findings report, optional opt-in fix phase |
 | `/relay:status` | Show phase, gate status, scores, blockers — from real execution logs |
 | `/relay:plan-review` | Unlock and re-run all three reviewers |
 | `/relay:security-audit` | Run Warden security verification on the current build |
@@ -283,6 +285,42 @@ Analyst ────────────► docs/existing-solution.md (must 
 
 ---
 
+### /relay:inspect — read-only analysis for existing solutions
+
+Purpose-built for solutions you didn't build — no plan.md, no requirements.md needed. Strictly read-only through Phase 6. Fix phase is opt-in.
+
+```
+Phase 1 — Auth + Context
+  PAC auth list → user selects account → confirm env + solution name
+  Optional: drop files into inspect-context/ (BRDs, module docs, screenshots)
+          │
+Phase 2 — Analyst    ──► existing-solution.md + flow logic analysis + Solution Checker
+Phase 3 — Warden     ──► Mode C: inferred security model vs discovered reality
+Phase 4 — Critic     ──► footgun checklist without requiring plan.md
+Phase 5 — Sentinel   ──► Lite Mode: GET-only probing (no writes, no destructive calls)
+          │
+Phase 6 — Report Synthesis
+  Health score: A (clean) / B (minor) / C (significant) / D (critical)
+  docs/inspect-report.md  ──► findings ranked by severity
+          │
+────────── READ-ONLY BOUNDARY — user must opt in to continue ──────────
+          │
+Phase 7 — Mender (Snapshot)   ──► solution ZIP + per-component snapshots
+Phase 8 — Mender (Fix Loop)   ──► one finding at a time, user approval per fix
+  Canvas formula/App Checker ──► Forge-Canvas
+  Flow logic/trigger/CR       ──► Forge-Flow
+  MDA form scripts            ──► Forge-MDA
+  Schema/columns/roles        ──► Vault
+  Power Pages templates       ──► Forge-Pages
+Phase 9 — Mender (Verify)     ──► Sentinel Lite regression gate → rollback if needed
+```
+
+> `/relay:inspect` supports PAC multi-account environments. It lists all authenticated profiles at startup and asks you to select by index — no silent account guessing.
+
+> The `inspect-context/` folder accepts `.md`, `.txt`, `.docx`, `.pdf`, `.xlsx`, `.png`, `.jpg`. Drop files before confirming ready, or skip entirely.
+
+---
+
 ### Parallel mode (Copilot CLI /fleet — faster)
 
 `/fleet` dispatches multiple subagents simultaneously. Relay uses it at every independent phase:
@@ -359,7 +397,7 @@ Sentinel generates and runs Playwright TypeScript tests using Microsoft's offici
 | MDA sitemap + form XML | ✅ Automated via Dataverse API |
 | Canvas App screens + formulas | ✅ Automated via Canvas Authoring MCP |
 | Code app connectors (Dataverse, Outlook, SharePoint…) | ✅ Automated via code-apps plugin |
-| Power Automate flows (build + activate) | ⚠️ Build guide (temporary) — automated import planned for v0.6.x |
+| Power Automate flows (build + import + activate) | ✅ Automated — Dataverse-shaped JSON, pac solution import, clientData PATCH |
 | Connection reference wiring | ✅ Automated — reuses existing connections |
 | Security role → user assignment | ✅ `pac admin assign-user` |
 | Canvas App first-time data source OAuth | ⚠️ User adds once in Power Apps Studio |
@@ -383,7 +421,7 @@ Sentinel generates and runs Playwright TypeScript tests using Microsoft's offici
 
 | Opus | Sonnet |
 |---|---|
-| Conductor, Drafter, Auditor, Warden, Critic | Scout, Stylist, Analyst, Vault, Forge, Sentinel |
+| Conductor, Drafter, Auditor, Warden, Critic | Scout, Stylist, Analyst, Vault, Forge, Sentinel, Mender |
 
 Configurable via `/relay:config`.
 
@@ -424,10 +462,10 @@ No Superpowers required. All skills are embedded:
 
 ```
 relay/
-├── agents/              # 10 specialist agent personas
-├── commands/            # 13 slash commands
+├── agents/              # 15 specialist agent personas
+├── commands/            # 15 slash commands
 ├── hooks/               # PreToolUse enforcement (Write/Edit + Bash phase gates)
-├── schemas/             # plan-index.schema.json
+├── schemas/             # plan-index.schema.json, state.schema.json
 ├── scripts/             # Gate validation, drift detection, scoring (Python)
 ├── skills/              # 21 embedded knowledge bases
 ├── templates/           # 7 document templates
@@ -441,7 +479,23 @@ relay/
 
 ## Roadmap
 
-### v0.3.2
+### v0.8.0 (current)
+- **`/relay:inspect`** — read-only analysis for solutions you didn't build: 6-phase report covering schema, flows, security, Canvas App Checker, Solution Checker, and code quality; health score A/B/C/D; `docs/inspect-report.md`
+- **Mender agent** — snapshot → fix → verify lifecycle with per-finding user approval; routes to correct Forge specialist; two-level rollback (component surgical + solution nuclear)
+- **PAC auth account selection** — `/relay:start` and `/relay:inspect` now run `pac auth list` and ask the user to select an account by index before doing anything; selected email stored in `state.json`
+- **Warden Mode C** — security audit mode for existing solutions: infers intended security model from apparent purpose, checks against discovered reality across 8 dimensions
+- **Critic No-Plan Mode** — footgun checklist for existing solutions without requiring `plan.md`; triple-condition gate prevents false-positive during normal greenfield builds
+- **Sentinel Lite Mode** — GET-only non-destructive probing; re-used by Mender as a regression gate after fixes
+- **Analyst extended** — flow logic analysis (6 checks per flow: error handling, filter expressions, concurrency, hardcoded values, loops, CR coverage) + Solution Checker integration (`pac solution check --json`)
+- **`inspect-context/` folder** — separate from `context/` (relay:load); accepts docs, images; optional drop before inspect; agents flag more conservatively when skipped
+- **`state.schema.json` expanded** — `pac_auth_account` field; `"inspect"` and `"audit"` in mode enum; 8 inspect-phase values in phase enum
+
+### v0.7.1
+- **Forge-Flow end-to-end automated** — flows now use Dataverse-shaped JSON, imported via `pac solution import`, activated via Dataverse `clientData` PATCH on the `workflows` table (restored from Pilot 1)
+- **Connection reference wiring** — existing connections discovered first and wired by connector name key, not CR logical name
+- **Removed "temporary measure" note** — flow build guides are no longer the output; full automation is the default
+
+### v0.7.0
 Fixes from early project validation:
 - Publisher prefix captured in Scout's first question — never defaults to `cr_`
 - `plan-index.json` created in `commands/start.md` as first action — can't be skipped

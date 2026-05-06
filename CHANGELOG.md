@@ -4,6 +4,57 @@ All notable changes to Relay are documented here.
 
 ---
 
+## [0.8.0] — 2026-05-06
+
+### New Command
+- `/relay:inspect` — 9-phase read-only analysis command for existing Power Platform solutions built by other developers; no `plan.md` or `requirements.md` required
+- Phases 1–6 are strictly read-only (hard boundary enforced by comment in inspect.md)
+- Phase 6 produces `docs/inspect-report.md` with a health score: A (clean), B (minor), C (significant), D (critical)
+- Phases 7–9 are opt-in fix phases (Snapshot → Fix Loop → Verify) coordinated by Mender
+
+### New Agent — Mender
+- Fix coordinator for `/relay:inspect` with three modes: Snapshot, Fix Loop, Verify
+- Snapshot Mode: captures solution ZIP (`pac solution export`) + per-component snapshots (Canvas `.msapp`, flow JSON, web resource base64, Power Pages download, security-scoped ZIP)
+- Fix Loop Mode: presents findings one-at-a-time with user approval, routes to correct Forge specialist (Canvas formula → Forge-Canvas, flow issues → Forge-Flow, schema/roles → Vault, MDA → Forge-MDA, Pages → Forge-Pages)
+- Verify Mode: Sentinel Lite regression gate after each fix; hard rollback trigger if regression detected
+- Rules: never acts without user approval, `snapshot_taken` must be true before any fixing, rollback handlers for all component types
+
+### Auth Selection
+- `/relay:start` Step 0c added: runs `pac auth list` + `pac org who`, presents all PAC profiles, asks user to select by index if multiple accounts; selected email stored as `pac_auth_account` in `state.json`
+- `/relay:inspect` Phase 1a: same auth selection flow before any discovery begins
+- Fixes silent account switching that caused confusion when multiple PAC accounts were authenticated
+
+### Agent Extensions
+- **Analyst**: two new sections (mode-gated to `inspect`/`audit` only): Flow Logic Analysis (6 checks per flow) and Solution Checker Integration (`pac solution check --json` → Critical/High/Medium/Low buckets)
+- **Warden**: Mode C appended — existing-solution security audit; infers intended security model from apparent purpose; 8 security dimension checks against discovered reality; outputs to `docs/audit-report.md`
+- **Critic**: No-Plan Mode appended — footgun checklist for existing solutions; triple-condition gate (mode = inspect/audit AND `existing-solution.md` present AND `plan.md` absent) prevents false-positive during greenfield builds
+- **Sentinel**: Lite Mode appended — GET-only non-destructive probing across 4 probe types; reused by Mender as a regression gate in Phase 9
+
+### Schema
+- `schemas/state.schema.json`: added `pac_auth_account` property; added `"inspect"` and `"audit"` to mode enum; added all 8 inspect-mode phase values (`intake`, `analysis`, `security`, `probing`, `report`, `snapshot`, `fixing`, `verifying`) to phase enum
+
+### Context
+- `inspect-context/` folder introduced — separate from `context/` (used by `/relay:load`) to avoid contamination; accepts `.md`, `.txt`, `.docx`, `.pdf`, `.xlsx`, `.png`, `.jpg`; agents flag findings more conservatively when no context is provided
+
+### Release
+- Release metadata bumped to 0.8.0
+
+---
+
+## [0.7.1] — 2026-05-05
+
+### Flow Automation
+- Forge-Flow now produces Dataverse-shaped flow JSON (connector names as `connectionReferences` keys, not CR logical names) for direct import — no standalone JSON scaffolds
+- Flows imported via `pac solution import` so they are solution-linked from the start
+- Flows activated via Dataverse `clientData` PATCH on the `workflows` table — restores the capability proven in Pilot 1 (Leave Request System) where all 3 flows were activated end-to-end without manual intervention
+- Connection references wired by querying existing connections first (`GET /api/data/v9.2/connections`) then matching by connector ID
+- "Temporary measure — build guide only" note removed from forge-flow.agent.md; automated deployment is now the default
+
+### Release
+- Release metadata bumped to 0.7.1
+
+---
+
 ## [0.7.0] — 2026-05-XX
 
 ### Workflow

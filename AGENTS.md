@@ -90,6 +90,7 @@ tools:
 | Forge-Flow | `docs/flow-build-guide.md`, `.relay/plan-index.json`, `.relay/execution-log.jsonl` |
 | Forge-Pages | `src/pages/`, `.relay/plan-index.json`, `.relay/execution-log.jsonl` |
 | Sentinel | `docs/test-report.md`, `docs/drift-report.md` |
+| Mender | `docs/snapshots/`, `.relay/state.json`, `.relay/execution-log.jsonl` |
 
 ---
 
@@ -237,3 +238,6 @@ Project-specific content belongs in the project's `.relay/` and `docs/` folders,
 | v0.5.2 | Deny-by-default hooks; full-path enforcement; Stylist/Analyst hook cases; drift-check subprocess hardening; expanded phase-gate coverage; state schema validation; regression harness |
 | v0.6.0 | Forge split into 4 specialists (forge-canvas, forge-mda, forge-flow, forge-pages); /relay:learn command; /relay:doctor full implementation; CHANGELOG.md |
 | v0.6.1 | Specialist hook permissions; Phase 5 specialist completion state; expanded hook tests; flow automation note corrected |
+| v0.7.0 | Planning/build gates hardened; Forge continuation explicit; Canvas/UX quality improved; recovery + browser automation strengthened; Vault metadata tightened; regression coverage expanded |
+| v0.7.1 | Forge-Flow end-to-end automated: Dataverse-shaped JSON + pac solution import + clientData PATCH activation; connection reference wiring via existing connections query |
+| v0.8.0 | /relay:inspect command (9-phase read-only analysis + opt-in fix phase); Mender agent (snapshot/fix/verify coordinator); PAC auth account selection in start + inspect; Warden Mode C; Critic No-Plan Mode; Sentinel Lite Mode; Analyst flow analysis + Solution Checker; state.schema.json expanded |

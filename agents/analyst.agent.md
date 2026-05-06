@@ -179,6 +179,87 @@ During discovery, flag anything that looks like:
 <Based on what you found, what's the safest pattern for making changes without breaking existing components?>
 ```
 
+---
+
+## Inspect Enhancement — Flow Logic Analysis
+
+> **Mode gate:** Only execute this section if `state.json` `mode` is `"inspect"` or `"audit"`. Skip for all other modes (`greenfield`, `change`, `bugfix`).
+>
+> Appended to Step 5 (Automation discovery).
+
+For every cloud flow discovered, perform a logic-level review:
+
+### Flow Logic Checklist (per flow)
+
+1. **Error handling** — Does the flow have a Scope action wrapping the main logic with a "Configure run after" set to failed/timed out? If not → flag as missing error handling.
+
+2. **filterexpression on row-modified triggers** — If the trigger is "When a row is modified", does it specify `filterexpression` or a column filter? A trigger without this fires on EVERY column update, including system timestamps. Flag all row-modified flows without a filter.
+
+3. **Concurrency** — If the flow processes records in a loop or is likely to be triggered in bulk (e.g., batch import scenarios), is concurrency degree set? Default is parallel — flag flows that appear sequential-sensitive (approval chains, status machines).
+
+4. **Hardcoded GUIDs / environment values** — Are there hardcoded record IDs, email addresses, or environment-specific values in flow actions? Flag every occurrence.
+
+5. **Loop constructs** — Apply to each / Until loops with no termination condition or no max iteration cap — flag as potential infinite loop risk.
+
+6. **Connection reference coverage** — Are all connection references in the flow registered? Any flow referencing a CR not in the solution = deployment failure risk.
+
+Add findings to the `## Automation` section of `docs/existing-solution.md`:
+
+```markdown
+### Flow Logic Analysis
+
+| Flow | Issue | Severity | Detail |
+|---|---|---|---|
+| <name> | Missing error handling | 🟡 Major | No Scope with run-after failed |
+| <name> | No filterexpression | 🟡 Major | Row-modified fires on all column changes |
+| <name> | Hardcoded GUID | 🔵 Minor | Action "Update row" has hardcoded recordId |
+```
+
+---
+
+## Inspect Enhancement — Solution Checker Integration
+
+> **Mode gate:** Only execute this section if `state.json` `mode` is `"inspect"` or `"audit"`. Skip for all other modes (`greenfield`, `change`, `bugfix`).
+>
+> Part of Step 1 (Solution inventory).
+
+```powershell
+# Export solution for checking
+pac solution export --name <SolutionName> --path ./temp-export-check --managed false --overwrite
+
+# Run solution checker
+pac solution check --path ./temp-export-check --outputDirectory ./temp-checker-output --json
+
+# Read results
+$checkerResults = Get-Content "./temp-checker-output/*.json" | ConvertFrom-Json
+```
+
+Parse output into severity buckets and add to `docs/existing-solution.md`:
+
+```markdown
+## Solution Checker Results
+
+| Severity | Count | Top Issues |
+|---|---|---|
+| 🔴 Critical | <N> | <top issue> |
+| 🟠 High     | <N> | <top issue> |
+| 🟡 Medium   | <N> | <top issue> |
+| 🔵 Low      | <N> | <top issue> |
+
+### Critical Issues
+| Rule | Component | Description |
+|---|---|---|
+| <rule id> | <component name> | <description> |
+
+### High Issues
+...
+```
+
+Clean up temp folders after:
+```powershell
+Remove-Item -Recurse -Force ./temp-export-check, ./temp-checker-output -ErrorAction SilentlyContinue
+```
+
 ## Handoff
 
 Return to Conductor:
