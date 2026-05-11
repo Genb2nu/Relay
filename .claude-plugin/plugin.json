@@ -8,8 +8,9 @@
   },
   "homepage": "https://github.com/Genb2nu/Relay",
   "license": "MIT",
-  "agents": "agents/",
-  "skills": "skills/",
-  "commands": "commands/",
-  "hooks": "hooks/hooks.json"
+  "readme": "../README.md",
+  "agents": "../agents/",
+  "skills": "../skills/",
+  "commands": "../commands/",
+  "hooks": "../hooks/hooks.json"
 }
