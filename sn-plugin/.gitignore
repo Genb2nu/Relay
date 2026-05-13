@@ -1,0 +1,43 @@
+# SimplifyNext sn-plugin .gitignore
+
+# State and runtime files (project-specific, not committed)
+.sn/state.json
+.sn/execution-log.jsonl
+.sn/context-summary.md
+
+# Keep the .sn directory itself (for templates)
+!.sn/.gitkeep
+
+# Exported solution files (large binaries — store in artifact registry)
+dist/*.zip
+
+# Environment-specific documents
+docs/qa-report.md
+
+# Context folder (user-supplied documents, often confidential)
+context/
+
+# IDE and OS files
+.vscode/
+.idea/
+*.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Node (if any tooling added)
+node_modules/
+npm-debug.log*
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+
+# PowerShell
+*.ps1.bak
+
+# Temporary files
+*.tmp
+*.temp

@@ -1,0 +1,33 @@
+{
+  "project": "",
+  "publisher_prefix": "",
+  "publisher_name": "",
+  "solution_name": "",
+  "environment": "",
+  "phase": "discovery",
+  "created_at": "",
+  "auditor_approved": false,
+  "auditor_issues": [],
+  "auditor_checklist_pass": 0,
+  "auditor_checklist_fail": 0,
+  "plan_locked": false,
+  "plan_checksum": "",
+  "security_design_checksum": "",
+  "review_cycle_count": 0,
+  "build_completed_at": "",
+  "sentinel_approved": false,
+  "sentinel_issues": [],
+  "drift_detected": false,
+  "drift_items": [],
+  "deployments": [],
+  "components": {
+    "tables": {},
+    "security_roles": {},
+    "fls_profiles": {},
+    "env_vars": {},
+    "canvas_apps": {},
+    "app_modules": {},
+    "flows": {},
+    "connection_references": {}
+  }
+}
